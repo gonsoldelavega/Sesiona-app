@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Sesiona · Cristina Romera</title>
+  <meta name="description" content="Sesiona: agenda, facturación automática, cobros y gestoría para consultas profesionales.">
+  <link rel="stylesheet" href="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v9-premium.css">
+  <link rel="stylesheet" href="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v10-gestoria-pro.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div>
+        <div class="brand">Sesiona <span>CRISTINA</span></div>
+        <div id="todayLine" class="todayLine"></div>
+      </div>
+      <button class="topBtn" data-view="advisor">Gestoría</button>
+    </header>
+    <main id="screen" class="screen"></main>
+    <button id="fab" class="fab">+</button>
+    <nav class="bottom">
+      <button data-view="agenda"><span>📅</span>Agenda</button>
+      <button data-view="home"><span>⌂</span>Inicio</button>
+      <button data-view="invoices"><span>◫</span>Facturas</button>
+      <button data-view="advisor"><span>▣</span>Gestoría</button>
+      <button data-view="more"><span>•••</span>Más</button>
+    </nav>
+  </div>
+  <div id="sheet" class="sheet">
+    <div class="sheetCard">
+      <h2>Crear rápido</h2>
+      <div class="sheetGrid">
+        <button data-new="session"><b>Cita</b><small>Agenda y factura automática</small></button>
+        <button data-new="client"><b>Cliente</b><small>Precio, fiscalidad y WhatsApp</small></button>
+        <button data-new="invoice"><b>Factura</b><small>Manual</small></button>
+        <button data-new="expense"><b>Gasto</b><small>Justificante y deducción</small></button>
+      </div>
+    </div>
+  </div>
+  <dialog id="dlg"><div id="modal" class="modal"></div></dialog>
+  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v9-premium.js"></script>
+  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v10-gestoria-pro.js"></script>
+  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v11-cristina.js"></script>
+  <script>
+    window.addEventListener('load', function(){
+      try {
+        document.title = 'Sesiona · Cristina Romera';
+        document.querySelectorAll('.brand').forEach(function(el){ el.innerHTML = 'Sesiona <span>CRISTINA</span>'; });
+      } catch(e) {}
+    });
+  </script>
+</body>
+</html>
