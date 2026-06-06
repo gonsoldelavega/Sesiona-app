@@ -297,10 +297,20 @@
   /* Acciones disparadas por click del usuario (mantienen activación de usuario) */
   window.__invShare = function () {
     if (!_pdf.file) return;
+    // Algunos navegadores móviles no admiten compartir archivo + texto juntos:
+    // si no se puede con texto, compartimos solo el PDF.
+    var withText = { files: [_pdf.file], text: _pdf.msg, title: 'Factura' };
+    var filesOnly = { files: [_pdf.file] };
+    var payload = (navigator.canShare && navigator.canShare(withText)) ? withText : filesOnly;
     try {
-      navigator.share({ files: [_pdf.file], text: _pdf.msg, title: 'Factura' })
+      navigator.share(payload)
         .then(function () { markSentAndClose(_pdf.id); })
-        .catch(function () { /* cancelado por el usuario */ });
+        .catch(function (err) {
+          // AbortError = el usuario canceló: no hacemos nada.
+          if (err && err.name === 'AbortError') return;
+          // Otro error: dejamos el PDF descargado y abrimos el chat con el texto.
+          downloadFile(_pdf.file); openChatText(_pdf.id, _pdf.msg); markSentAndClose(_pdf.id);
+        });
     } catch (e) {
       downloadFile(_pdf.file); openChatText(_pdf.id, _pdf.msg); markSentAndClose(_pdf.id);
     }
