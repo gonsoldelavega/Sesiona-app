@@ -105,12 +105,23 @@ function iso(daysFromNow, hhmm){const d=new Date(Date.now()+daysFromNow*86400000
 S.sessions.push({id:'sa',c:'c1',start:iso(0,'23:30'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // hoy tarde-noche (futura)
 S.sessions.push({id:'sb',c:'c1',start:iso(3,'10:00'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // dentro de 3 días
 window.F='next';
+window.AV='list';
 window.go('agenda');
 const ag = document.getElementById('screen').innerHTML;
 ok('agenda muestra "Próxima cita"', /Próxima cita/.test(ag));
 ok('agenda agrupa por día (cabecera Hoy)', /Hoy ·/.test(ag));
 ok('cita de hoy aparece en Próximas', /sa|23:30/.test(ag) && /23:30/.test(ag));
 ok('chips Próximas/Semana/Mes/Todas', /Semana/.test(ag) && /Mes/.test(ag) && /Todas/.test(ag));
+
+console.log('\n== Agenda: vista calendario (3 días) ==');
+window.AV='cal';
+window.go('agenda');
+const agCal = document.getElementById('screen').innerHTML;
+ok('agenda calendario muestra "Próxima cita"', /Próxima cita/.test(agCal));
+ok('agenda calendario contiene .calGrid', /calGrid/.test(agCal));
+ok('agenda calendario muestra cabeceras de día', /calColHead/.test(agCal));
+ok('window.agendaCal definido', typeof window.agendaCal==='function');
+ok('window.newSessionAt definido', typeof window.newSessionAt==='function');
 
 console.log('\n== Crear cita: default mañana 16:00 ==');
 window.sessionForm();
@@ -136,6 +147,7 @@ window.mark(newSess.id,'finalizada');
 ok('marcar Finalizada desde la agenda SÍ crea factura', S.invoices.length===invCountBefore+1 && !!newSess.inv);
 
 console.log('\n== Sprint 2: bugs visibles ==');
+window.AV='list';
 window.go('agenda');
 const ag2 = document.getElementById('screen').innerHTML;
 ok('chip "Sin facturar" en agenda', /Sin facturar/.test(ag2));
