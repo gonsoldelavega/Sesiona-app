@@ -31,7 +31,8 @@ function ok(name, cond){ if(cond){pass++; console.log('  ✓ '+name);} else {fai
 console.log('\n== Estado inicial ==');
 ok('S existe', !!S);
 ok('render ejecutado (todayLine)', document.getElementById('todayLine').textContent.length>0);
-ok('autoBillOn por defecto true', window.autoBillOn()===true);
+ok('autoBillOn por defecto false (manual)', window.autoBillOn()===false);
+S.set.autoBill=true; // habilitar auto para probar el camino automático en los siguientes bloques
 ok('seeInvoice es el override profesional', /buildInvoiceHTML/.test(window.seeInvoice.toString()));
 ok('photoImport definido', typeof window.photoImport==='function');
 
@@ -188,6 +189,19 @@ const mB = invB.num.match(reYear);
 ok('factura A tiene formato -NNN/AAAA del año actual', !!mA);
 ok('factura B tiene formato -NNN/AAAA del año actual', !!mB);
 ok('dos facturas del mismo año llevan números correlativos', !!mA && !!mB && (Number(mB[1]) === Number(mA[1]) + 1));
+
+console.log('\n== Facturación manual con botón "Crear factura" ==');
+S.set.autoBill=false;
+const sM={id:'sM',c:'c1',start:'2026-06-06T15:00',price:60,st:'programada',inv:'',rem:false,noBill:false};
+S.sessions.push(sM);
+const invM=S.invoices.length;
+window.mark('sM','finalizada');
+ok('manual: marcar finalizada NO crea factura', S.invoices.length===invM && !sM.inv);
+window.invoiceSession('sM');
+ok('manual: "Crear factura" (invoiceSession) sí la crea', S.invoices.length===invM+1 && !!sM.inv);
+window.AV='list'; window.go('agenda');
+ok('tarjeta de cita muestra botón "Crear factura"', /Crear factura/.test(document.getElementById('screen').innerHTML));
+S.set.autoBill=true;
 
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
