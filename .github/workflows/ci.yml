@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    name: Smoke test (jsdom)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependencias de test
+        run: npm install
+      - name: Comprobar sintaxis de los scripts del bot
+        run: |
+          for f in bot/src/*.js; do node --check "$f"; done
+      - name: Ejecutar smoke test de la app
+        run: npm test

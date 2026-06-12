@@ -1,0 +1,15 @@
+# Dependencias y artefactos
+node_modules/
+
+# Secretos y entorno (nunca subir)
+.env
+.env.*
+!.env.example
+
+# Sesión de WhatsApp del bot (credenciales del dispositivo vinculado)
+bot/auth/
+
+# Sistema / logs
+*.log
+.DS_Store
+Thumbs.db
