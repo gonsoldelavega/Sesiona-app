@@ -31,7 +31,8 @@ function ok(name, cond){ if(cond){pass++; console.log('  ✓ '+name);} else {fai
 console.log('\n== Estado inicial ==');
 ok('S existe', !!S);
 ok('render ejecutado (todayLine)', document.getElementById('todayLine').textContent.length>0);
-ok('autoBillOn por defecto true', window.autoBillOn()===true);
+ok('autoBillOn por defecto false (manual)', window.autoBillOn()===false);
+S.set.autoBill=true; // habilitar auto para probar el camino automático en los siguientes bloques
 ok('seeInvoice es el override profesional', /buildInvoiceHTML/.test(window.seeInvoice.toString()));
 ok('photoImport definido', typeof window.photoImport==='function');
 
@@ -105,12 +106,23 @@ function iso(daysFromNow, hhmm){const d=new Date(Date.now()+daysFromNow*86400000
 S.sessions.push({id:'sa',c:'c1',start:iso(0,'23:30'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // hoy tarde-noche (futura)
 S.sessions.push({id:'sb',c:'c1',start:iso(3,'10:00'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // dentro de 3 días
 window.F='next';
+window.AV='list';
 window.go('agenda');
 const ag = document.getElementById('screen').innerHTML;
 ok('agenda muestra "Próxima cita"', /Próxima cita/.test(ag));
 ok('agenda agrupa por día (cabecera Hoy)', /Hoy ·/.test(ag));
 ok('cita de hoy aparece en Próximas', /sa|23:30/.test(ag) && /23:30/.test(ag));
 ok('chips Próximas/Semana/Mes/Todas', /Semana/.test(ag) && /Mes/.test(ag) && /Todas/.test(ag));
+
+console.log('\n== Agenda: vista calendario (3 días) ==');
+window.AV='cal';
+window.go('agenda');
+const agCal = document.getElementById('screen').innerHTML;
+ok('agenda calendario muestra "Próxima cita"', /Próxima cita/.test(agCal));
+ok('agenda calendario contiene .calGrid', /calGrid/.test(agCal));
+ok('agenda calendario muestra cabeceras de día', /calColHead/.test(agCal));
+ok('window.agendaCal definido', typeof window.agendaCal==='function');
+ok('window.newSessionAt definido', typeof window.newSessionAt==='function');
 
 console.log('\n== Crear cita: default mañana 16:00 ==');
 window.sessionForm();
@@ -136,6 +148,7 @@ window.mark(newSess.id,'finalizada');
 ok('marcar Finalizada desde la agenda SÍ crea factura', S.invoices.length===invCountBefore+1 && !!newSess.inv);
 
 console.log('\n== Sprint 2: bugs visibles ==');
+window.AV='list';
 window.go('agenda');
 const ag2 = document.getElementById('screen').innerHTML;
 ok('chip "Sin facturar" en agenda', /Sin facturar/.test(ag2));
@@ -176,6 +189,19 @@ const mB = invB.num.match(reYear);
 ok('factura A tiene formato -NNN/AAAA del año actual', !!mA);
 ok('factura B tiene formato -NNN/AAAA del año actual', !!mB);
 ok('dos facturas del mismo año llevan números correlativos', !!mA && !!mB && (Number(mB[1]) === Number(mA[1]) + 1));
+
+console.log('\n== Facturación manual con botón "Crear factura" ==');
+S.set.autoBill=false;
+const sM={id:'sM',c:'c1',start:'2026-06-06T15:00',price:60,st:'programada',inv:'',rem:false,noBill:false};
+S.sessions.push(sM);
+const invM=S.invoices.length;
+window.mark('sM','finalizada');
+ok('manual: marcar finalizada NO crea factura', S.invoices.length===invM && !sM.inv);
+window.invoiceSession('sM');
+ok('manual: "Crear factura" (invoiceSession) sí la crea', S.invoices.length===invM+1 && !!sM.inv);
+window.AV='list'; window.go('agenda');
+ok('tarjeta de cita muestra botón "Crear factura"', /Crear factura/.test(document.getElementById('screen').innerHTML));
+S.set.autoBill=true;
 
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
