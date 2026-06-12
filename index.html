@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Sesiona · Cristina Romera</title>
-  <meta name="description" content="Sesiona: agenda, facturación automática, cobros y gestoría para consultas profesionales.">
-  <link rel="stylesheet" href="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v9-premium.css">
-  <link rel="stylesheet" href="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v10-gestoria-pro.css">
+  <meta name="description" content="Sesiona: agenda, facturación, cobros y gestoría para consultas profesionales.">
+  <meta name="theme-color" content="#315f73">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/advisor.css">
+  <link rel="stylesheet" href="assets/css/invoice.css">
 </head>
 <body>
   <div class="app">
@@ -31,7 +33,8 @@
     <div class="sheetCard">
       <h2>Crear rápido</h2>
       <div class="sheetGrid">
-        <button data-new="session"><b>Cita</b><small>Agenda y factura automática</small></button>
+        <button data-new="session"><b>Cita</b><small>Agenda y factura</small></button>
+        <button data-new="photo"><b>Foto agenda</b><small>Sincroniza desde una foto</small></button>
         <button data-new="client"><b>Cliente</b><small>Precio, fiscalidad y WhatsApp</small></button>
         <button data-new="invoice"><b>Factura</b><small>Manual</small></button>
         <button data-new="expense"><b>Gasto</b><small>Justificante y deducción</small></button>
@@ -39,9 +42,11 @@
     </div>
   </div>
   <dialog id="dlg"><div id="modal" class="modal"></div></dialog>
-  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v9-premium.js"></script>
-  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v10-gestoria-pro.js"></script>
-  <script src="https://raw.githack.com/gonsoldelavega/copia-webs/master/consulta-clara-canarias/v11-cristina.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/advisor.js"></script>
+  <script src="assets/js/branding.js"></script>
+  <script src="assets/js/invoice.js"></script>
+  <script src="assets/js/photo-import.js"></script>
   <script>
     window.addEventListener('load', function(){
       try {

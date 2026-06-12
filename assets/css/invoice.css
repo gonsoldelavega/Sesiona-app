@@ -1,0 +1,454 @@
+/* invoice.css – Estilos de la plantilla de factura profesional para Sesiona
+   Paleta: --ink:#102631; --brand:#315f73; --mut:#6e7c82; --line:#d8e6e7
+   Tipografía serif (Georgia) para cabeceras, consistente con app.css
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ── Barra de acciones (encima del documento, no se imprime) ───────── */
+.invActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #d8e6e7;
+  background: #f5fafa;
+  border-radius: 33px 33px 0 0;
+}
+
+/* ── Contenedor principal del documento ─────────────────────────────── */
+.invoiceDoc {
+  position: relative;
+  background: #fff;
+  color: #102631;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 36px 40px 40px;
+  border-radius: 0 0 33px 33px;
+  overflow: hidden;  /* para marca de agua */
+}
+
+/* ── Cabecera: emisor + bloque de número ─────────────────────────────── */
+.invHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.invEmisor {
+  flex: 1;
+}
+
+.invLogoWrap {
+  margin-bottom: 12px;
+}
+
+.invLogo {
+  max-height: 64px;
+  max-width: 160px;
+  object-fit: contain;
+  display: block;
+}
+
+.invEmisorName {
+  font-family: Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  color: #102631;
+  margin-bottom: 6px;
+}
+
+.invEmisorLine {
+  font-size: 12.5px;
+  color: #6e7c82;
+  line-height: 1.6;
+}
+
+/* Bloque número/fecha: lado derecho */
+.invNumBloque {
+  min-width: 200px;
+  max-width: 240px;
+  background: linear-gradient(145deg, #244f60, #315f73);
+  color: #fff;
+  border-radius: 18px;
+  padding: 20px 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.invFacLabel {
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.invNumNum {
+  font-family: Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+
+.invNumLine {
+  font-size: 12px;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.7;
+}
+
+.invNumLine span {
+  color: rgba(255,255,255,0.55);
+}
+
+/* ── Separador ───────────────────────────────────────────────────────── */
+.invSep {
+  border: 0;
+  border-top: 1px solid #d8e6e7;
+  margin: 24px 0;
+}
+
+/* ── Bloque "Facturar a" ─────────────────────────────────────────────── */
+.invClienteBloque {
+  margin-bottom: 28px;
+}
+
+.invClienteLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  font-weight: 850;
+  color: #6e7c82;
+  margin-bottom: 6px;
+}
+
+.invClienteNombre {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+  color: #102631;
+  margin-bottom: 4px;
+}
+
+.invClienteInfo {
+  font-size: 13px;
+  color: #6e7c82;
+  line-height: 1.6;
+}
+
+/* ── Tabla de conceptos ──────────────────────────────────────────────── */
+.invTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  font-size: 13.5px;
+}
+
+.invTable th {
+  background: #eaf5f2;
+  color: #315f73;
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 9px 12px;
+  border-bottom: 2px solid #d8e6e7;
+}
+
+.invThDesc {
+  text-align: left;
+}
+
+.invThNum {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.invTable tbody tr.invRow:hover {
+  background: #f8fdfc;
+}
+
+.invTable tbody td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #eaf5f2;
+  vertical-align: top;
+}
+
+.invTdDesc {
+  text-align: left;
+  color: #102631;
+}
+
+.invTdNum {
+  text-align: right;
+  color: #6e7c82;
+  white-space: nowrap;
+}
+
+.invTdTotal {
+  color: #102631;
+  font-weight: 850;
+}
+
+/* ── Bloque de totales ───────────────────────────────────────────────── */
+.invTotalesBloque {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 18px 0 4px;
+  margin-bottom: 16px;
+}
+
+.invTotalRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 48px;
+  font-size: 13.5px;
+  color: #6e7c82;
+  min-width: 320px;
+}
+
+.invTotalRow span:first-child {
+  text-align: right;
+  flex: 1;
+}
+
+.invTotalRow span:last-child {
+  min-width: 90px;
+  text-align: right;
+}
+
+/* Fila TOTAL destacada */
+.invTotalFinal {
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  color: #102631;
+  border-top: 2px solid #102631;
+  padding-top: 10px;
+  margin-top: 6px;
+}
+
+/* Badge IGIC régimen */
+.invRegBadge {
+  display: inline-block;
+  background: #e9f7f0;
+  color: #2b7b61;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.invRegBadge.warn {
+  background: #fff4df;
+  color: #af7215;
+}
+
+/* ── Estado de cobro ─────────────────────────────────────────────────── */
+.invEstadoCobro {
+  text-align: center;
+  margin: 10px 0 20px;
+}
+
+.invBadgePagada {
+  display: inline-block;
+  background: linear-gradient(135deg, #2b7b61, #1f5c49);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 10px 32px;
+  border-radius: 12px;
+  border: 3px solid #2b7b61;
+  box-shadow: 0 4px 18px rgba(43,123,97,0.18);
+}
+
+.invBadgePendiente {
+  display: inline-block;
+  background: #fff4df;
+  color: #7a4f0d;
+  border: 1px solid #e0b96a;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.invBadgeParcial {
+  display: inline-block;
+  background: #fff8ec;
+  color: #7a4f0d;
+  border: 1px solid #e0c87a;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 13.5px;
+}
+
+/* ── Forma de pago ───────────────────────────────────────────────────── */
+.invPago {
+  margin-bottom: 20px;
+}
+
+.invPagoLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  font-weight: 850;
+  color: #6e7c82;
+  margin-bottom: 5px;
+}
+
+.invPagoTexto {
+  font-size: 13px;
+  color: #102631;
+  margin-bottom: 4px;
+}
+
+.invIban {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #315f73;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+}
+
+/* ── Pie legal ───────────────────────────────────────────────────────── */
+.invPie {
+  font-size: 11.5px;
+  color: #6e7c82;
+  border-top: 1px solid #d8e6e7;
+  padding-top: 14px;
+  line-height: 1.5;
+}
+
+/* ── Marca de agua ANULADA ───────────────────────────────────────────── */
+.invAnulada {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-family: Georgia, serif;
+  font-size: 80px;
+  font-weight: 400;
+  color: rgba(169, 68, 68, 0.13);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 0;
+  border: 8px solid rgba(169, 68, 68, 0.10);
+  padding: 8px 24px;
+  border-radius: 8px;
+}
+
+/* Asegura que el contenido queda sobre la marca de agua */
+.invoiceDoc > *:not(.invAnulada) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── ESTILOS DE IMPRESIÓN / PDF ──────────────────────────────────────── */
+@media print {
+  /* Ocultar todo el cuerpo */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Mostrar sólo el dialog y su contenido */
+  #dlg,
+  #dlg * {
+    visibility: visible !important;
+  }
+
+  /* Posicionar el dialog para que ocupe toda la página */
+  #dlg {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Eliminar el backdrop oscuro */
+  #dlg::backdrop {
+    display: none !important;
+  }
+
+  /* Ajustar el modal interno */
+  .modal {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Ocultar los botones de acción */
+  .no-print {
+    display: none !important;
+  }
+
+  /* El documento de factura sin decoración */
+  .invoiceDoc {
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 16px 24px 24px !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Ajustes de colores para impresión en B/N legible */
+  .invNumBloque {
+    background: #102631 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invBadgePagada {
+    background: #2b7b61 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invTable th {
+    background: #eaf5f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Evitar saltos de página en elementos clave */
+  .invTable,
+  .invTotalesBloque,
+  .invPago,
+  .invPie {
+    page-break-inside: avoid;
+  }
+
+  /* Configuración de página A4 */
+  @page {
+    size: A4 portrait;
+    margin: 14mm 14mm 16mm;
+  }
+}
