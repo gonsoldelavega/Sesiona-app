@@ -73,20 +73,23 @@
       igicValor = fmt(igic);
     }
 
-    /* — Estado de cobro — */
+    /* — Estado de cobro (sello) — */
     var saldo    = bal(i);
     var cobrado  = total - saldo;
+    var stampHTML  = '';
     var estadoCobro = '';
     if (saldo === 0 && total > 0) {
-      estadoCobro = '<div class="invBadgePagada">PAGADA</div>';
+      stampHTML = '<div class="invStamp invStamp-pagada">Pagada</div>';
     } else if (cobrado > 0 && saldo > 0) {
+      stampHTML = '<div class="invStamp invStamp-parcial">Pago parcial</div>';
       estadoCobro =
         '<div class="invBadgeParcial">' +
           'Cobrado ' + fmt(cobrado) +
           ' · <strong>Pendiente ' + fmt(saldo) + '</strong>' +
         '</div>';
     } else if (saldo > 0) {
-      estadoCobro = '<div class="invBadgePendiente">Pendiente de cobro: ' + fmt(saldo) + '</div>';
+      stampHTML = '<div class="invStamp invStamp-pendiente">Pendiente de cobro</div>';
+      estadoCobro = '<div class="invBadgePendiente">Importe pendiente: ' + fmt(saldo) + '</div>';
     }
 
     /* — Marca de agua ANULADA — */
@@ -111,7 +114,9 @@
 
       /* ── Documento ── */
       '<div class="invoiceDoc">' +
+        '<div class="invTopBar"></div>' +
         anuladaHTML +
+        stampHTML +
 
         /* Cabecera */
         '<header class="invHeader">' +
@@ -125,14 +130,12 @@
             (emisorPhone ? '<div class="invEmisorLine">Tel. ' + emisorPhone + '</div>'               : '') +
           '</div>' +
           '<div class="invNumBloque">' +
-            '<div class="invFacLabel">FACTURA</div>' +
+            '<div class="invFacLabel">Factura</div>' +
             '<div class="invNumNum">' + esc(i.num || '—') + '</div>' +
-            '<div class="invNumLine"><span>Emisión:</span> ' + fmtDate(i.date) + '</div>' +
-            '<div class="invNumLine"><span>Vencimiento:</span> ' + fmtDate(i.due) + '</div>' +
+            '<div class="invNumLine"><span>Emisión</span> ' + fmtDate(i.date) + '</div>' +
+            '<div class="invNumLine"><span>Vencimiento</span> ' + fmtDate(i.due) + '</div>' +
           '</div>' +
         '</header>' +
-
-        '<hr class="invSep">' +
 
         /* Datos del cliente */
         '<section class="invClienteBloque">' +
@@ -164,20 +167,22 @@
         '</table>' +
 
         /* Bloque de totales */
-        '<div class="invTotalesBloque">' +
-          '<div class="invTotalRow">' +
-            '<span>Base imponible</span><span>' + fmt(base) + '</span>' +
-          '</div>' +
-          '<div class="invTotalRow">' +
-            '<span>' + igicLabel + '</span><span>' + igicValor + '</span>' +
-          '</div>' +
-          (irpf > 0 ?
+        '<div class="invTotalesWrap">' +
+          '<div class="invTotalesBloque">' +
             '<div class="invTotalRow">' +
-              '<span>IRPF retenido</span><span>-' + fmt(irpf) + '</span>' +
-            '</div>'
-          : '') +
-          '<div class="invTotalRow invTotalFinal">' +
-            '<span>TOTAL</span><span>' + fmt(total) + '</span>' +
+              '<span>Base imponible</span><span>' + fmt(base) + '</span>' +
+            '</div>' +
+            '<div class="invTotalRow">' +
+              '<span>' + igicLabel + '</span><span>' + igicValor + '</span>' +
+            '</div>' +
+            (irpf > 0 ?
+              '<div class="invTotalRow">' +
+                '<span>IRPF retenido</span><span>-' + fmt(irpf) + '</span>' +
+              '</div>'
+            : '') +
+            '<div class="invTotalRow invTotalFinal">' +
+              '<span>TOTAL</span><span>' + fmt(total) + '</span>' +
+            '</div>' +
           '</div>' +
         '</div>' +
 
