@@ -147,6 +147,36 @@ const sf2 = document.getElementById('modal').innerHTML;
 ok('formulario permite hora 00 y 23', /value="00"/.test(sf2) && /value="23"/.test(sf2));
 ok('demoSeed y seed definidos', typeof window.demoSeed==='function' && typeof window.seed==='function');
 
+console.log('\n== Sprint 3: robustez ==');
+ok('esc escapa comillas, & y <', window.esc("O'Brien & <b>") === 'O&#39;Brien &amp; &lt;b&gt;');
+
+ok('window.waClient existe', typeof window.waClient === 'function');
+
+console.log('\n== Sprint 3: numeración de facturas correlativa por año ==');
+const year = new Date().getFullYear();
+window.invoiceForm();
+document.getElementById('ic').value = 'c1';
+document.getElementById('concept').value = 'Sesión 1';
+document.getElementById('qty').value = '1';
+document.getElementById('unit').value = '60';
+window.saveInvoiceManual();
+const invA = S.invoices[S.invoices.length - 1];
+
+window.invoiceForm();
+document.getElementById('ic').value = 'c1';
+document.getElementById('concept').value = 'Sesión 2';
+document.getElementById('qty').value = '1';
+document.getElementById('unit').value = '60';
+window.saveInvoiceManual();
+const invB = S.invoices[S.invoices.length - 1];
+
+const reYear = new RegExp('-(\\d{3})\\/' + year + '$');
+const mA = invA.num.match(reYear);
+const mB = invB.num.match(reYear);
+ok('factura A tiene formato -NNN/AAAA del año actual', !!mA);
+ok('factura B tiene formato -NNN/AAAA del año actual', !!mB);
+ok('dos facturas del mismo año llevan números correlativos', !!mA && !!mB && (Number(mB[1]) === Number(mA[1]) + 1));
+
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
 process.exit(fail?1:0);
