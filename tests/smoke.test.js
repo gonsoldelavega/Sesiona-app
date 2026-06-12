@@ -135,6 +135,18 @@ ok('guardar cita (incluso finalizada) NO crea factura', S.invoices.length===invC
 window.mark(newSess.id,'finalizada');
 ok('marcar Finalizada desde la agenda SÍ crea factura', S.invoices.length===invCountBefore+1 && !!newSess.inv);
 
+console.log('\n== Sprint 2: bugs visibles ==');
+window.go('agenda');
+const ag2 = document.getElementById('screen').innerHTML;
+ok('chip "Sin facturar" en agenda', /Sin facturar/.test(ag2));
+ok('hero Avisos navega a alerts', /onclick="go\('alerts'\)"/.test(ag2));
+window.go('more');
+ok('Más incluye acceso a Avisos', /go\('alerts'\)/.test(document.getElementById('screen').innerHTML));
+window.sessionForm();
+const sf2 = document.getElementById('modal').innerHTML;
+ok('formulario permite hora 00 y 23', /value="00"/.test(sf2) && /value="23"/.test(sf2));
+ok('demoSeed y seed definidos', typeof window.demoSeed==='function' && typeof window.seed==='function');
+
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
 process.exit(fail?1:0);
