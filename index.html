@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Sesiona · Cristina Romera</title>
+  <title>Sesiona</title>
   <meta name="description" content="Sesiona: agenda, facturación, cobros y gestoría para consultas profesionales.">
   <meta name="theme-color" content="#315f73">
   <link rel="stylesheet" href="assets/css/app.css">
@@ -15,7 +15,7 @@
   <div class="app">
     <header class="top">
       <div>
-        <div class="brand">Sesiona <span>CRISTINA</span></div>
+        <div class="brand">Sesiona <span></span></div>
         <div id="todayLine" class="todayLine"></div>
       </div>
       <button class="topBtn" data-view="advisor">Gestoría</button>
@@ -51,8 +51,11 @@
   <script>
     window.addEventListener('load', function(){
       try {
-        document.title = 'Sesiona · Cristina Romera';
-        document.querySelectorAll('.brand').forEach(function(el){ el.innerHTML = 'Sesiona <span>CRISTINA</span>'; });
+        var pro = (window.S && S.set && (S.set.pro || '')) || '';
+        if (pro === 'Profesional') pro = '';
+        var name = String(pro).toUpperCase().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        document.title = 'Sesiona';
+        document.querySelectorAll('.brand').forEach(function(el){ el.innerHTML = 'Sesiona <span>'+name+'</span>'; });
       } catch(e) {}
     });
   </script>

@@ -71,11 +71,12 @@ ok('modo manual: no factura automática', !s4.inv && S.invoices.length===invBefo
 S.set.autoBill=true;
 
 console.log('\n== Plantilla de factura ==');
+S.set.fiscal='Consulta Demo Test';
 window.seeInvoice(S.invoices[0].id);
 const modalHtml = document.getElementById('modal').innerHTML;
 ok('factura: contiene invoiceDoc', /invoiceDoc/.test(modalHtml));
 ok('factura: tabla de conceptos', /invTable/.test(modalHtml));
-ok('factura: total y emisor', /TOTAL/.test(modalHtml) && /Cristina Romera/.test(modalHtml));
+ok('factura: total y emisor', /TOTAL/.test(modalHtml) && /Consulta Demo Test/.test(modalHtml));
 ok('factura: botón imprimir', /print\(\)/.test(modalHtml));
 
 console.log('\n== Importar por foto (OCR) ==');
@@ -202,6 +203,14 @@ ok('manual: "Crear factura" (invoiceSession) sí la crea', S.invoices.length===i
 window.AV='list'; window.go('agenda');
 ok('tarjeta de cita muestra botón "Crear factura"', /Crear factura/.test(document.getElementById('screen').innerHTML));
 S.set.autoBill=true;
+
+console.log('\n== Sprint 5: asistente de primera configuración ==');
+ok('window.setupWizard definido', typeof window.setupWizard==='function');
+window.setupWizard();
+const wizHtml = document.getElementById('modal').innerHTML;
+ok('asistente: incluye campo obnif', /id="obnif"/.test(wizHtml));
+ok('asistente: incluye campo obpro', /id="obpro"/.test(wizHtml));
+ok('window.saveWizard definido', typeof window.saveWizard==='function');
 
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
