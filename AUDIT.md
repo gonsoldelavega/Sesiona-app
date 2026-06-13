@@ -68,6 +68,11 @@ docs/                       ocr-setup.md, whatsapp-bot-setup.md
 
 ## 3. BACKLOG priorizado (sprints pequeños, 1 sprint = 1 cambio testeable)
 
+> ESTADO (act. 2026-06-13): Sprints 1-7 ✅ fusionados a `main`/producción. Pendiente: Etapa 2 (nube + bot) — requiere credenciales/decisiones de Nando.
+> - S1 ✅ higiene+tests+CI · S2 ✅ bugs visibles · S3 ✅ robustez (escapado/numeración/backup) · S4 ✅ agenda 3 días + demo · S5 ✅ onboarding configurable · S6 ✅ estética + factura · S7 ✅ PWA instalable.
+> - Pretty-print de app.js (D1): pendiente/opcional (no bloqueante). Vendorizar CDNs (D3): pendiente/opcional.
+
+
 **Sprint 1 — Higiene y red de seguridad** (sin tocar funcionalidad)
 1. `.gitignore` raíz (S2) · 2. Versionar smoke test en `tests/` + script de ejecución (D5) · 3. Pretty-print de `app.js` sin cambios de lógica, validado con el smoke test (D1).
 
