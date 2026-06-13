@@ -9,9 +9,9 @@
   grid-template-columns:44px repeat(3,1fr);
   gap:0;
   border:1px solid var(--line);
-  border-radius:20px;
+  border-radius:var(--r-lg);
   background:#fff;
-  box-shadow:var(--shadow);
+  box-shadow:var(--shadow-sm);
   overflow:hidden;
   margin-bottom:18px;
 }
@@ -44,7 +44,7 @@
   border:1px solid var(--line);
   background:#fff;
   color:var(--brand);
-  border-radius:999px;
+  border-radius:var(--r-pill);
   width:20px;
   height:20px;
   line-height:1;
@@ -55,7 +55,10 @@
   justify-content:center;
   padding:0;
   flex:0 0 auto;
+  transition:transform .12s ease,box-shadow .12s ease;
 }
+.calAdd:active{transform:scale(.92)}
+.calAdd:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
 
 .calColBody{
   position:relative;
@@ -101,18 +104,21 @@
   left:2px;
   right:2px;
   min-height:16px;
-  border-radius:10px;
+  border-radius:var(--r-sm);
   padding:3px 6px;
   font-size:10.5px;
   line-height:1.25;
   color:#fff;
   background:var(--brand);
-  box-shadow:0 4px 10px rgba(49,95,115,.22);
+  box-shadow:var(--shadow-xs);
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis;
   cursor:pointer;
+  transition:transform .12s ease,box-shadow .12s ease;
 }
+.calItem:active{transform:scale(.98)}
+.calItem:focus-visible{outline:2px solid var(--brand2);outline-offset:1px}
 .calItem b{font-weight:850;margin-right:3px}
 .calItem-asistida,.calItem-finalizada{background:var(--green)}
 .calItem-cancelada,.calItem-no_presentada,.calItem-dim{
