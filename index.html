@@ -6,6 +6,12 @@
   <title>Sesiona</title>
   <meta name="description" content="Sesiona: agenda, facturación, cobros y gestoría para consultas profesionales.">
   <meta name="theme-color" content="#315f73">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sesiona">
   <link rel="stylesheet" href="assets/css/app.css">
   <link rel="stylesheet" href="assets/css/advisor.css">
   <link rel="stylesheet" href="assets/css/invoice.css">
@@ -58,6 +64,11 @@
         document.querySelectorAll('.brand').forEach(function(el){ el.innerHTML = 'Sesiona <span>'+name+'</span>'; });
       } catch(e) {}
     });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+    }
   </script>
 </body>
 </html>
