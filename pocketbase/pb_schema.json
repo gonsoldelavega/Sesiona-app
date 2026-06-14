@@ -1,0 +1,124 @@
+[
+  {
+    "name": "settings",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "data", "type": "json", "required": false }
+    ]
+  },
+  {
+    "name": "clients",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "aid", "type": "text", "required": true },
+      { "name": "name", "type": "text" },
+      { "name": "sur", "type": "text" },
+      { "name": "nif", "type": "text" },
+      { "name": "phone", "type": "text" },
+      { "name": "price", "type": "number" },
+      { "name": "irpf", "type": "number" },
+      { "name": "type", "type": "text" },
+      { "name": "igicReg", "type": "text" },
+      { "name": "amigo", "type": "bool" },
+      { "name": "notes", "type": "text" }
+    ]
+  },
+  {
+    "name": "sessions",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "aid", "type": "text", "required": true },
+      { "name": "clientAid", "type": "text" },
+      { "name": "start", "type": "text" },
+      { "name": "price", "type": "number" },
+      { "name": "st", "type": "text" },
+      { "name": "notes", "type": "text" },
+      { "name": "inv", "type": "text" },
+      { "name": "rem", "type": "bool" },
+      { "name": "noBill", "type": "bool" },
+      { "name": "reminderSentAt", "type": "text" },
+      { "name": "confirmStatus", "type": "text" },
+      { "name": "confirmAt", "type": "text" }
+    ]
+  },
+  {
+    "name": "invoices",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "aid", "type": "text", "required": true },
+      { "name": "clientAid", "type": "text" },
+      { "name": "num", "type": "text" },
+      { "name": "date", "type": "text" },
+      { "name": "due", "type": "text" },
+      { "name": "concept", "type": "text" },
+      { "name": "base", "type": "number" },
+      { "name": "igic", "type": "number" },
+      { "name": "irpf", "type": "number" },
+      { "name": "total", "type": "number" },
+      { "name": "st", "type": "text" },
+      { "name": "reg", "type": "text" },
+      { "name": "sent", "type": "bool" }
+    ]
+  },
+  {
+    "name": "payments",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "aid", "type": "text", "required": true },
+      { "name": "invAid", "type": "text" },
+      { "name": "date", "type": "text" },
+      { "name": "amount", "type": "number" },
+      { "name": "method", "type": "text" }
+    ]
+  },
+  {
+    "name": "expenses",
+    "type": "base",
+    "listRule": "user.id = @request.auth.id",
+    "viewRule": "user.id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && user = @request.auth.id",
+    "updateRule": "user.id = @request.auth.id",
+    "deleteRule": "user.id = @request.auth.id",
+    "schema": [
+      { "name": "user", "type": "relation", "required": true, "options": { "collectionId": "_pb_users_auth_", "maxSelect": 1, "cascadeDelete": true } },
+      { "name": "aid", "type": "text", "required": true },
+      { "name": "prov", "type": "text" },
+      { "name": "date", "type": "text" },
+      { "name": "total", "type": "number" },
+      { "name": "igic", "type": "number" },
+      { "name": "cat", "type": "text" },
+      { "name": "ded", "type": "text" },
+      { "name": "doc", "type": "bool" }
+    ]
+  }
+]
