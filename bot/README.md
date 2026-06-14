@@ -1,30 +1,48 @@
 # Sesiona WhatsApp Bot
 
-Bot de WhatsApp (basado en [Baileys](https://github.com/WhiskeySockets/Baileys)) que envía recordatorios de citas y gestiona las confirmaciones de los clientes de Sesiona, todo sobre Supabase.
+Bot de WhatsApp (basado en [Baileys](https://github.com/WhiskeySockets/Baileys)) que envía recordatorios de citas y gestiona las confirmaciones de los clientes de Sesiona, todo sobre **PocketBase** (autoalojado).
 
 ## 1. Qué hace
 
-- Cada cierto tiempo (`POLL_CRON`) revisa en Supabase las citas con estado `programada` cuya hora de inicio está dentro de las próximas `REMIND_HOURS` horas (24h por defecto) y a las que aún no se les ha enviado recordatorio.
-- A esas citas les envía por WhatsApp un mensaje recordatorio pidiendo confirmación, y marca la cita como `confirm_status = pending` y `reminder_sent_at` con la fecha de envío.
+- Cada cierto tiempo (`POLL_CRON`) revisa en PocketBase las sesiones (`sessions`) del profesional configurado (`SESIONA_USER_ID`) con estado `programada` cuya hora de inicio (`start`) está dentro de las próximas `REMIND_HOURS` horas (24h por defecto) y a las que aún no se les ha enviado recordatorio (`reminderSentAt` vacío).
+- A esas citas les envía por WhatsApp un mensaje recordatorio pidiendo confirmación, y marca la sesión como `confirmStatus = "pending"`, `rem = true` y `reminderSentAt` con la fecha/hora de envío.
 - Cuando el cliente responde desde ese número de teléfono, el bot interpreta el texto:
-  - Si entiende **SÍ** (confirmación, "vale", "ahí estaré", "👍", etc.), marca la cita como `confirmed` y responde con un mensaje de **agradecimiento y confirmación**.
-  - Si entiende **NO** (cancelación, "no puedo", "❌", etc.), marca la cita como `cancelled` (y la sesión como `cancelada`) y responde con un mensaje de **agradecimiento por avisar e invitación a buscar una nueva fecha**.
+  - Si entiende **SÍ** (confirmación, "vale", "ahí estaré", "👍", etc.), marca la sesión como `confirmStatus = "confirmed"` (con `confirmAt`) y responde con un mensaje de **agradecimiento y confirmación**.
+  - Si entiende **NO** (cancelación, "no puedo", "❌", etc.), marca la sesión como `confirmStatus = "cancelled"` y `st = "cancelada"` (con `confirmAt`), y responde con un mensaje de **agradecimiento por avisar e invitación a buscar una nueva fecha**.
   - Si no entiende la respuesta, pide que conteste de nuevo con SÍ o NO.
-- Todo el estado se guarda en las tablas `sesiona_clients` y `sesiona_sessions` de Supabase, para que la app web pueda reflejarlo.
+- Todo el estado se guarda en las colecciones `clients` y `sessions` de PocketBase, para que la app web pueda reflejarlo.
 
 ## 2. Requisitos
 
 - **Node.js 20 o superior**.
-- Una clave **`service_role`** del proyecto de Supabase (es secreta: nunca debe ir al navegador ni a git).
+- Una instancia de **PocketBase autoalojada** (en tu VPS), con las colecciones de Sesiona ya creadas (ver [`docs/etapa2-nube-setup.md`](../docs/etapa2-nube-setup.md) en la raíz del proyecto).
+- Credenciales de un **superusuario/admin** de PocketBase (solo para el bot; nunca deben ir al navegador ni a git).
+- El **id del registro** del profesional en la colección `users` de PocketBase (el bot gestiona la agenda de ESE usuario).
 - Un **número de WhatsApp** disponible para vincular como dispositivo del bot (ver aviso al final).
 
-## 3. Instalación local
+## 3. Variables de entorno
+
+Copia `.env.example` a `.env` y rellena:
+
+| Variable | Descripción |
+| --- | --- |
+| `PB_URL` | URL de tu instancia de PocketBase (p. ej. `http://127.0.0.1:8090` o `https://agenda.tudominio.com`). |
+| `PB_ADMIN_EMAIL` | Email del superusuario/admin de PocketBase. |
+| `PB_ADMIN_PASSWORD` | Contraseña del superusuario/admin de PocketBase. |
+| `SESIONA_USER_ID` | Id del registro del profesional en la colección `users` cuya agenda gestiona el bot. |
+| `TZ` | Zona horaria para formatear fechas y para el temporizador (p. ej. `Atlantic/Canary`). |
+| `REMIND_HOURS` | Horas de antelación con las que se envía el recordatorio (24 por defecto). |
+| `POLL_CRON` | Frecuencia (cron) con la que se revisan citas pendientes de recordatorio. |
+| `COUNTRY_PREFIX` | Prefijo de país por defecto si el teléfono del cliente tiene 9 dígitos. |
+| `AUTH_DIR` | Carpeta donde se guarda la sesión de WhatsApp vinculada (debe persistir entre reinicios). |
+
+## 4. Instalación local
 
 1. Copia el archivo de ejemplo de variables de entorno:
    ```bash
    cp .env.example .env
    ```
-2. Rellena `SUPABASE_SERVICE_ROLE_KEY` en `.env`. La encuentras en el panel de Supabase: **Project Settings → API → Project API keys → `service_role`**.
+2. Rellena `PB_URL`, `PB_ADMIN_EMAIL`, `PB_ADMIN_PASSWORD` y `SESIONA_USER_ID` en `.env`.
 3. Instala las dependencias:
    ```bash
    npm install
@@ -37,7 +55,16 @@ Bot de WhatsApp (basado en [Baileys](https://github.com/WhiskeySockets/Baileys))
 
 La carpeta `auth/` guarda las credenciales de la sesión de WhatsApp vinculada. **No la borres** entre reinicios o tendrás que volver a escanear el QR; ya está incluida en `.gitignore` para no subirla al repositorio.
 
-## 4. Despliegue en VPS
+## 5. Crear las colecciones en PocketBase
+
+El bot necesita que existan las colecciones `clients` y `sessions` (además de la colección de autenticación `users`), con relación `user` (-> `users`) y el campo `aid` (id propio de la app). Sigue la guía completa en [`docs/etapa2-nube-setup.md`](../docs/etapa2-nube-setup.md) para instalar PocketBase en tu VPS, exponerlo con TLS y crear/importar el esquema de colecciones.
+
+Resumen de los campos que usa el bot:
+
+- `clients`: `user`, `aid`, `name`, `sur`, `nif`, `phone`, `price`, `irpf`, `type`, `igicReg`, `amigo` (bool), `notes`.
+- `sessions`: `user`, `aid`, `clientAid` (text), `start` (text `YYYY-MM-DDTHH:mm`), `price`, `st`, `notes`, `inv`, `rem` (bool), `noBill` (bool), `reminderSentAt` (text ISO), `confirmStatus` (text: `none`|`pending`|`confirmed`|`cancelled`), `confirmAt` (text ISO).
+
+## 6. Despliegue en VPS
 
 ### Opción A: Docker
 
@@ -54,6 +81,7 @@ docker run -d --restart=always --name sesiona-bot \
   ```bash
   docker logs -f sesiona-bot
   ```
+- Si PocketBase corre en el mismo VPS escuchando en `127.0.0.1`, asegúrate de que `PB_URL` sea accesible desde el contenedor (por ejemplo usando `http://host.docker.internal:8090` o la red de Docker correspondiente, o exponiendo PocketBase en la red interna del host con `--network host`).
 
 ### Opción B: pm2
 
@@ -70,28 +98,36 @@ pm2 save
 pm2 startup
 ```
 
-## 5. Probar el bot
+## 7. Probar el bot
 
-Inserta un cliente de prueba (por ejemplo, tu hermano) y una cita aproximadamente 24h en el futuro directamente con SQL en el editor SQL de Supabase:
+Desde el **panel de administración de PocketBase** (`PB_URL/_/`), con el usuario admin:
 
-```sql
-insert into sesiona_clients (id,name,phone,price) values ('test1','Hermano','34XXXXXXXXX',60);
-insert into sesiona_sessions (id,client_id,start_at,price,st) values ('s_test1','test1', now() + interval '23 hours', 60, 'programada');
-```
-
-(sustituye `34XXXXXXXXX` por el número real con prefijo de país).
+1. En la colección `clients`, crea un registro de prueba con:
+   - `user`: el id del profesional (el mismo que `SESIONA_USER_ID`).
+   - `aid`: un identificador único, p. ej. `test1`.
+   - `name`: `Hermano` (o el nombre que quieras).
+   - `phone`: tu número real con prefijo de país, p. ej. `34XXXXXXXXX`.
+   - `price`: `60`.
+2. En la colección `sessions`, crea un registro de prueba con:
+   - `user`: el mismo id del profesional.
+   - `aid`: un identificador único, p. ej. `s_test1`.
+   - `clientAid`: `test1` (debe coincidir con el `aid` del cliente anterior).
+   - `start`: una fecha/hora ~23 horas en el futuro, en formato `YYYY-MM-DDTHH:mm` (hora local según `TZ`).
+   - `price`: `60`.
+   - `st`: `programada`.
+   - deja `reminderSentAt` y `confirmStatus` vacíos (o `confirmStatus = "none"`).
 
 Como la cita está dentro de las próximas 24 horas (`REMIND_HOURS=24` por defecto), al arrancar el bot —o como muy tarde en el siguiente "tick" del temporizador (`POLL_CRON`, cada 5 minutos por defecto)— enviará el recordatorio a ese número de WhatsApp.
 
 Si quieres forzar el envío inmediato, puedes:
 - Subir temporalmente `REMIND_HOURS` a un valor más alto, o
-- Programar la cita más cerca en el tiempo (p. ej. `now() + interval '5 minutes'`).
+- Programar la cita más cerca en el tiempo (p. ej. dentro de 5-10 minutos).
 
 Cuando respondas **SÍ** o **NO** desde ese mismo teléfono, el bot:
-1. Actualiza la fila correspondiente en `sesiona_sessions` (`confirm_status`, `confirm_at`, y `st` si se cancela).
+1. Actualiza el registro correspondiente en `sessions` (`confirmStatus`, `confirmAt`, y `st` si se cancela).
 2. Te envía automáticamente el mensaje de agradecimiento (confirmación) o el de agradecimiento + invitación a reprogramar (cancelación).
 
-## 6. Aviso importante
+## 8. Aviso importante
 
 Este bot usa **Baileys**, una librería **NO oficial** que se conecta a WhatsApp emulando un cliente web. Esto conlleva el **riesgo de que WhatsApp bloquee o restrinja el número** vinculado, especialmente con volúmenes altos de mensajes o patrones poco habituales.
 

@@ -1,31 +1,75 @@
-import { db } from './supabase.js';
+import { pb, ensureAuth } from './pocketbase.js';
 import { config } from './config.js';
-import { fmtDate, fmtTime } from './format.js';
+import { fmtDate, fmtTime, toLocalMinuteString } from './format.js';
 import * as M from './messages.js';
 
 export async function sendDueReminders(send) {
+  await ensureAuth();
   const now = new Date();
   const horizon = new Date(now.getTime() + config.remindHours * 3600 * 1000);
-  const { data: sessions, error } = await db.from('sesiona_sessions')
-    .select('*')
-    .eq('st', 'programada')
-    .is('reminder_sent_at', null)
-    .gt('start_at', now.toISOString())
-    .lte('start_at', horizon.toISOString());
-  if (error) { console.error('[reminders] error consultando:', error.message); return; }
+  // 'start' se guarda como texto 'YYYY-MM-DDTHH:mm' en hora local (config.tz).
+  // Comparamos como cadenas usando el mismo formato para que la comparación sea correcta.
+  const nowStr = toLocalMinuteString(now);
+  const horizonStr = toLocalMinuteString(horizon);
+
+  let sessions;
+  try {
+    sessions = await pb.collection('sessions').getFullList({
+      filter: pb.filter(
+        'user = {:u} && st = "programada" && (reminderSentAt = "" || reminderSentAt = null) && start > {:now} && start <= {:horizon}',
+        { u: config.userId, now: nowStr, horizon: horizonStr }
+      ),
+    });
+  } catch (e) {
+    if (e?.status === 401) {
+      try {
+        await ensureAuth();
+        sessions = await pb.collection('sessions').getFullList({
+          filter: pb.filter(
+            'user = {:u} && st = "programada" && (reminderSentAt = "" || reminderSentAt = null) && start > {:now} && start <= {:horizon}',
+            { u: config.userId, now: nowStr, horizon: horizonStr }
+          ),
+        });
+      } catch (e2) {
+        console.error('[reminders] error consultando sesiones:', e2.message);
+        return;
+      }
+    } else {
+      console.error('[reminders] error consultando sesiones:', e.message);
+      return;
+    }
+  }
+
   if (!sessions || !sessions.length) return;
-  const ids = [...new Set(sessions.map((s) => s.client_id).filter(Boolean))];
-  const { data: clients } = await db.from('sesiona_clients').select('*').in('id', ids);
-  const byId = Object.fromEntries((clients || []).map((c) => [c.id, c]));
+
   for (const s of sessions) {
-    const c = byId[s.client_id];
-    if (!c || !c.phone) continue;
-    const d = new Date(s.start_at);
     try {
-      await send(c.phone, M.reminder(c.name || '', fmtDate(d), fmtTime(d)));
+      if (!s.clientAid) continue;
+      let client;
+      try {
+        client = await pb.collection('clients').getFirstListItem(
+          pb.filter('user = {:u} && aid = {:a}', { u: config.userId, a: s.clientAid })
+        );
+      } catch (e) {
+        if (e?.status === 404) {
+          console.warn(`[reminders] cliente no encontrado para sesión ${s.id} (clientAid=${s.clientAid})`);
+          continue;
+        }
+        throw e;
+      }
+      if (!client || !client.phone) continue;
+
+      const d = new Date(s.start);
+      await send(client.phone, M.reminder(client.name || '', fmtDate(d), fmtTime(d)));
       const stamp = new Date().toISOString();
-      await db.from('sesiona_sessions').update({ reminder_sent_at: stamp, rem: true, confirm_status: 'pending', updated_at: stamp }).eq('id', s.id);
-      console.log(`[reminders] enviado a ${c.name} (${c.phone}) cita ${d.toISOString()}`);
-    } catch (e) { console.error('[reminders] error enviando:', e.message); }
+      await pb.collection('sessions').update(s.id, {
+        reminderSentAt: stamp,
+        rem: true,
+        confirmStatus: 'pending',
+      });
+      console.log(`[reminders] enviado a ${client.name} (${client.phone}) cita ${s.start}`);
+    } catch (e) {
+      console.error('[reminders] error enviando:', e.message);
+    }
   }
 }

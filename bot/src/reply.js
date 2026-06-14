@@ -1,5 +1,6 @@
-import { db } from './supabase.js';
-import { last9, fmtDate, fmtTime } from './format.js';
+import { pb, ensureAuth } from './pocketbase.js';
+import { config } from './config.js';
+import { last9, fmtDate, fmtTime, toLocalMinuteString } from './format.js';
 import * as M from './messages.js';
 
 const NO_RE = /\b(no|nop|nope|cancelar?|anular?|imposible|no\s*puedo|no\s*podr|❌|🚫)\b/i;
@@ -16,31 +17,62 @@ export function parseIntent(text) {
 export async function handleReply(phone, text, send) {
   const key = last9(phone);
   if (key.length < 6) return;
-  const { data: clients } = await db.from('sesiona_clients').select('*');
+
+  await ensureAuth();
+
+  let clients;
+  try {
+    clients = await pb.collection('clients').getFullList({
+      filter: pb.filter('user = {:u}', { u: config.userId }),
+    });
+  } catch (e) {
+    if (e?.status === 401) {
+      await ensureAuth();
+      clients = await pb.collection('clients').getFullList({
+        filter: pb.filter('user = {:u}', { u: config.userId }),
+      });
+    } else {
+      console.error('[reply] error consultando clientes:', e.message);
+      return;
+    }
+  }
+
   const client = (clients || []).find((c) => last9(c.phone) === key);
   if (!client) return; // número desconocido: ignorar
-  const nowIso = new Date().toISOString();
-  const { data: sess } = await db.from('sesiona_sessions')
-    .select('*')
-    .eq('client_id', client.id)
-    .eq('confirm_status', 'pending')
-    .gt('start_at', nowIso)
-    .order('start_at', { ascending: true })
-    .limit(1);
-  const s = sess && sess[0];
-  if (!s) return; // nada pendiente de confirmar
+
+  const nowStr = toLocalMinuteString(new Date());
+  let s;
+  try {
+    s = await pb.collection('sessions').getFirstListItem(
+      pb.filter('user = {:u} && clientAid = {:a} && confirmStatus = "pending" && start > {:now}', {
+        u: config.userId, a: client.aid, now: nowStr,
+      }),
+      { sort: '+start' }
+    );
+  } catch (e) {
+    if (e?.status === 404) return; // nada pendiente de confirmar
+    console.error('[reply] error consultando sesión pendiente:', e.message);
+    return;
+  }
+  if (!s) return;
+
   const intent = parseIntent(text);
-  const d = new Date(s.start_at);
+  const d = new Date(s.start);
   const stamp = new Date().toISOString();
-  if (intent === 'yes') {
-    await db.from('sesiona_sessions').update({ confirm_status: 'confirmed', confirm_at: stamp, updated_at: stamp }).eq('id', s.id);
-    await send(client.phone, M.thanksConfirm(client.name || '', fmtDate(d), fmtTime(d)));
-    console.log(`[reply] ${client.name} CONFIRMA cita ${s.id}`);
-  } else if (intent === 'no') {
-    await db.from('sesiona_sessions').update({ confirm_status: 'cancelled', st: 'cancelada', confirm_at: stamp, updated_at: stamp }).eq('id', s.id);
-    await send(client.phone, M.thanksCancel(client.name || ''));
-    console.log(`[reply] ${client.name} CANCELA cita ${s.id}`);
-  } else {
-    await send(client.phone, M.askAgain());
+
+  try {
+    if (intent === 'yes') {
+      await pb.collection('sessions').update(s.id, { confirmStatus: 'confirmed', confirmAt: stamp });
+      await send(client.phone, M.thanksConfirm(client.name || '', fmtDate(d), fmtTime(d)));
+      console.log(`[reply] ${client.name} CONFIRMA cita ${s.id}`);
+    } else if (intent === 'no') {
+      await pb.collection('sessions').update(s.id, { confirmStatus: 'cancelled', st: 'cancelada', confirmAt: stamp });
+      await send(client.phone, M.thanksCancel(client.name || ''));
+      console.log(`[reply] ${client.name} CANCELA cita ${s.id}`);
+    } else {
+      await send(client.phone, M.askAgain());
+    }
+  } catch (e) {
+    console.error('[reply] error actualizando sesión:', e.message);
   }
 }
