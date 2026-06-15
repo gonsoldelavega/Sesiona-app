@@ -36,11 +36,24 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload && sudo systemctl enable --now pocketbase
 ```
 
-## 2) HTTPS con un dominio (imprescindible)
-La app va por **https** (Vercel) y NO puede llamar a un backend por http. Pon
-PocketBase detrás de un reverse proxy con TLS automático. Ejemplo con **Caddy**
-en un subdominio `agenda.tudominio.com` (apunta el DNS al VPS antes):
+## 2) HTTPS (necesario) — sin pagar, con un subdominio gratis
+La app va por **https** (Vercel) y NO puede llamar a un backend por http, así que
+PocketBase necesita HTTPS. Para HTTPS hace falta un **nombre** (no vale una IP
+pelada), pero puede ser **gratis**. NO necesitas comprar un dominio.
 
+### Opción A (recomendada, 0 €): subdominio gratis + HTTPS automático de PocketBase
+1. Crea un subdominio gratis en **https://www.duckdns.org** (login con Google/GitHub),
+   p.ej. `sesiona`, y apúntalo a la **IP pública de tu VPS**. Te queda
+   `sesiona.duckdns.org`.
+2. Abre los puertos **80 y 443** en el firewall del VPS.
+3. Arranca PocketBase pidiéndole certificado automático (Let's Encrypt):
+   ```bash
+   ./pocketbase serve --https=sesiona.duckdns.org
+   ```
+   (En el servicio systemd, cambia el ExecStart a `--https=sesiona.duckdns.org`.)
+4. Tu URL pública será: **`https://sesiona.duckdns.org`** — gratis y permanente.
+
+### Opción B: reverse proxy con Caddy (si ya usas un dominio/subdominio propio)
 `/etc/caddy/Caddyfile`:
 ```
 agenda.tudominio.com {
@@ -50,7 +63,14 @@ agenda.tudominio.com {
 ```bash
 sudo systemctl reload caddy
 ```
-Tu URL pública de PocketBase será: `https://agenda.tudominio.com`
+Tu URL pública será `https://agenda.tudominio.com`.
+
+### Opción C: Cloudflare Tunnel (0 €, sin abrir puertos)
+Útil si no quieres abrir puertos en el VPS. Con un dominio en Cloudflare queda
+estable; el túnel "rápido" sin dominio da una URL que cambia al reiniciar (no
+recomendable para uso permanente).
+
+> Un dominio propio (~10 €/año) es **opcional**, solo por tener un nombre bonito.
 
 ## 3) Primer arranque y colecciones
 1. Abre `https://agenda.tudominio.com/_/` y crea la **cuenta de administrador** (contraseña fuerte).
