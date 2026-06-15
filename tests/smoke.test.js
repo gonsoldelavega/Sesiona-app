@@ -19,7 +19,7 @@ window.alert = function(m){ window.__alert = m; };
 window.confirm = function(){ return true; };
 window.URL.createObjectURL = function(){ return 'blob:fake'; };
 
-const combined = ['app.js','advisor.js','branding.js','invoice.js','photo-import.js']
+const combined = ['app.js','advisor.js','branding.js','invoice.js','photo-import.js','cloud.js']
   .map(f => fs.readFileSync(path + '/assets/js/' + f, 'utf8'))
   .join('\n;\n') + '\n;window.S=S;';
 window.eval(combined);
@@ -211,6 +211,18 @@ const wizHtml = document.getElementById('modal').innerHTML;
 ok('asistente: incluye campo obnif', /id="obnif"/.test(wizHtml));
 ok('asistente: incluye campo obpro', /id="obpro"/.test(wizHtml));
 ok('window.saveWizard definido', typeof window.saveWizard==='function');
+
+console.log('\n== Sincronización en la nube (opcional, opt-in) ==');
+ok('window.cloudConfigured es función', typeof window.cloudConfigured === 'function');
+ok('cloudConfigured()===false sin pbUrl', window.cloudConfigured() === false);
+ok('window.save sigue siendo función', typeof window.save === 'function');
+ok('cloudLoggedIn()===false sin sesión', typeof window.cloudLoggedIn === 'function' && window.cloudLoggedIn() === false);
+const ccBefore = S.clients.length;
+window.save();
+ok('save() envuelto no rompe ni llama a la nube sin login', S.clients.length === ccBefore && typeof window.save === 'function');
+window.go('settings');
+const setHtml = document.getElementById('screen').innerHTML;
+ok('Ajustes incluye sección de sincronización en la nube', /Sincronización en la nube/.test(setHtml) && /id="pburl"/.test(setHtml));
 
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
