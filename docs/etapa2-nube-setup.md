@@ -7,6 +7,11 @@ usuario.
 Arquitectura: **app web** (login + sincronización) ⇄ **PocketBase** (en el VPS)
 ⇄ **bot de WhatsApp** (mismo VPS, accede como admin a la agenda del usuario).
 
+> **Atajo:** hay scripts que automatizan casi todo en el VPS:
+> `scripts/setup-pocketbase.sh` (instala PocketBase + HTTPS DuckDNS + servicio) y
+> `scripts/setup-bot.sh` (deja el bot corriendo con pm2). Ver instrucciones de uso
+> dentro de cada script. Abajo está también el paso a paso manual.
+
 ---
 
 ## 1) Instalar PocketBase en el VPS
