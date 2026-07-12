@@ -499,7 +499,16 @@ function agendaCalBody() {
   let days = [0, 1, 2].map((i) => shiftCGfrom(CG, i)),
     t0 = today(),
     now = new Date(),
-    rows = END_H - START_H,
+    startH = START_H,
+    endHour = END_H;
+  S.sessions.forEach((s) => {
+    if (!days.includes(String(s.start).slice(0, 10))) return;
+    let d = new Date(s.start),
+      h = d.getHours() + d.getMinutes() / 60;
+    startH = Math.max(0, Math.min(startH, Math.floor(h)));
+    endHour = Math.min(24, Math.max(endHour, Math.ceil(h + 50 / 60)));
+  });
+  let rows = endHour - startH,
     dayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
     cols = days
       .map((ds) => {
@@ -513,9 +522,9 @@ function agendaCalBody() {
             .map((s) => {
               let dt = new Date(s.start),
                 h = dt.getHours() + dt.getMinutes() / 60,
-                top = Math.max(0, Math.min(rows - 0.35, h - START_H)),
-                endH = Math.max(START_H, Math.min(END_H, h + 50 / 60)),
-                height = Math.max(0.35, endH - (START_H + top)),
+                top = Math.max(0, Math.min(rows - 0.35, h - startH)),
+                blockEnd = Math.max(startH, Math.min(endHour, h + 50 / 60)),
+                height = Math.max(0.35, blockEnd - (startH + top)),
                 c = client(s.c),
                 atten =
                   s.st == "cancelada" || s.st == "no_presentada"
@@ -550,10 +559,10 @@ function agendaCalBody() {
           nowLine = "";
         if (isToday) {
           let nh = now.getHours() + now.getMinutes() / 60;
-          if (nh >= START_H && nh <= END_H)
+          if (nh >= startH && nh <= endHour)
             nowLine =
               '<div class="calNow" style="top:' +
-              ((nh - START_H) / rows) * 100 +
+              ((nh - startH) / rows) * 100 +
               '%"></div>';
         }
         return (
@@ -584,7 +593,7 @@ function agendaCalBody() {
           '<div class="calHourLabel" style="top:' +
           (i / rows) * 100 +
           '%">' +
-          String(START_H + i).padStart(2, "0") +
+          String(startH + i).padStart(2, "0") +
           ":00</div>",
       ).join("") +
       "</div></div>";
@@ -905,7 +914,7 @@ function settings(r) {
     (!autoBillOn() ? "selected" : "") +
     '>No generar nunca · siempre manual</option></select></div><p class="notice">El envío por WhatsApp siempre es manual: tú decides cuándo enviar cada factura. Los clientes marcados como amigo nunca se facturan.</p><div class="field"><label>Importar agenda por foto · lectura de alta precisión (opcional)</label><input id="vision" value="' +
     (s.visionEndpoint || "") +
-    '" placeholder="URL de la edge function de Google Vision (vacío = OCR local gratis)"></div><p class="notice">Por defecto la foto se lee gratis en el propio móvil. Si pegas aquí la URL del servicio de Google Vision (ver docs/ocr-setup.md), la lectura será más precisa.</p><div class="actions"><button class="btn" onclick="saveSet()">Guardar</button><button class="btn alt" onclick="setupWizard()">Asistente de configuración</button><button class="btn alt" onclick="demoSeed()">Demo</button><button class="btn alt" onclick="exportData()">Exportar</button><button class="btn bad" onclick="clearAll()">Vaciar</button></div></div>';
+    '" placeholder="URL de la edge function de Google Vision (vacío = OCR local gratis)"></div><p class="notice">Por defecto la foto se lee gratis en el propio móvil. Si pegas aquí la URL del servicio de Google Vision (ver docs/ocr-setup.md), la lectura será más precisa.</p><div class="actions"><button class="btn" onclick="saveSet()">Guardar</button><button class="btn alt" onclick="setupWizard()">Asistente de configuración</button><button class="btn alt" onclick="demoSeed()">Demo</button><button class="btn alt" onclick="exportData()">Exportar</button><input id="importFile" type="file" accept=".json,application/json" style="display:none" onchange="importData(this)"><button class="btn alt" onclick="importFile.click()">Importar copia</button><button class="btn bad" onclick="clearAll()">Vaciar</button></div></div>';
 }
 function openM(h) {
   $("modal").innerHTML = h;
@@ -956,11 +965,37 @@ function clientForm(id) {
       esc(c.notes || "") +
       '</textarea></div><p class="notice">Los clientes marcados como amigo nunca generan factura automática.</p><button class="btn" onclick="saveClient(\'' +
       (id || "") +
-      "')\">Guardar</button>",
+      "')\">Guardar</button>" +
+      (id
+        ? '<button class="btn bad" style="margin-top:8px" onclick="delClient(\'' +
+          id +
+          "')\">Eliminar cliente</button>"
+        : ""),
   );
   if (c.type) type.value = c.type;
   if (c.igicReg) igreg.value = c.igicReg;
   amigo.value = c.amigo ? "1" : "0";
+}
+function delClient(id) {
+  let c = client(id);
+  if (!c) return;
+  if (S.invoices.some((i) => i.c == id))
+    return alert(
+      "Este cliente tiene facturas emitidas y no se puede borrar: las facturas deben conservarse. Si ya no le atiendes, márcalo como amigo / sin factura.",
+    );
+  let n = S.sessions.filter((s) => s.c == id).length;
+  if (
+    !confirm(
+      "¿Borrar el cliente " +
+        (c.name || "") +
+        (n ? " y sus " + n + " citas" : "") +
+        "? Esta acción no se puede deshacer.",
+    )
+  )
+    return;
+  S.sessions = S.sessions.filter((s) => s.c != id);
+  S.clients = S.clients.filter((x) => x.id != id);
+  closeM();
 }
 function saveClient(id) {
   let c = id ? client(id) : { id: gid("c") };
@@ -1042,6 +1077,11 @@ function sessionForm(cid, id) {
           : '<button class="btn alt" style="margin-top:8px" onclick="invoiceSession(\'' +
             id +
             "')\">Crear factura</button>"
+        : "") +
+      (id
+        ? '<button class="btn bad" style="margin-top:8px" onclick="delSession(\'' +
+          id +
+          "')\">Eliminar cita</button>"
         : ""),
   );
   sc.value = cid || s.c || S.clients[0].id;
@@ -1049,6 +1089,20 @@ function sessionForm(cid, id) {
   sst.value = s.st || "programada";
   sbill.value = s.noBill ? "1" : "0";
   if (!id) syncPrice();
+}
+function delSession(id) {
+  let s = S.sessions.find((x) => x.id == id);
+  if (!s) return;
+  if (
+    !confirm(
+      "¿Eliminar esta cita?" +
+        (s.inv ? " La factura asociada se conserva." : "") +
+        " Esta acción no se puede deshacer.",
+    )
+  )
+    return;
+  S.sessions = S.sessions.filter((x) => x.id != id);
+  closeM();
 }
 function syncPrice() {
   let c = client(sc.value);
@@ -1224,9 +1278,45 @@ function payForm(id) {
       today() +
       '"></div><div class="field"><label>Importe</label><input id="pamount" type="number" value="' +
       bal(i) +
-      '"></div></div><div class="field"><label>Método</label><select id="pmethod"><option>bizum</option><option>transferencia</option><option>efectivo</option><option>tarjeta</option></select></div><button class="btn" onclick="savePay()">Guardar</button>',
+      '"></div></div><div class="field"><label>Método</label><select id="pmethod"><option>bizum</option><option>transferencia</option><option>efectivo</option><option>tarjeta</option></select></div><button class="btn" onclick="savePay()">Guardar</button><div class="section" style="margin-top:14px"><h2>Cobros ya registrados</h2></div><div id="payList"></div>',
   );
   pinv.value = i.id;
+  pinv.onchange = renderPayList;
+  renderPayList();
+}
+function renderPayList() {
+  let el = $("payList");
+  if (!el) return;
+  let invId = pinv.value,
+    inv = S.invoices.find((x) => x.id == invId),
+    ps = S.payments.filter((p) => p.inv == invId);
+  if (pamount && inv) pamount.value = bal(inv);
+  el.innerHTML = !ps.length
+    ? '<div class="empty">Sin cobros registrados para esta factura.</div>'
+    : ps
+        .map(
+          (p) =>
+            '<div class="item" style="padding:10px 12px;margin-bottom:8px"><p>' +
+            new Date(String(p.date).slice(0, 10) + "T00:00").toLocaleDateString(
+              "es-ES",
+            ) +
+            " · <b>" +
+            fmt(p.amount) +
+            "</b> · " +
+            esc(p.method || "") +
+            '</p><button class="action bad" onclick="delPayment(\'' +
+            p.id +
+            "')\">Borrar cobro</button></div>",
+        )
+        .join("");
+}
+function delPayment(id) {
+  let p = S.payments.find((x) => x.id == id);
+  if (!p) return;
+  if (!confirm("¿Borrar este cobro de " + fmt(p.amount) + "? La factura volverá a figurar como pendiente por ese importe.")) return;
+  S.payments = S.payments.filter((x) => x.id != id);
+  save();
+  renderPayList();
 }
 function savePay() {
   S.payments.push({
@@ -1364,6 +1454,49 @@ function exportData() {
   a.click();
   S.set.lastExport = Date.now();
   save();
+}
+function applyImport(d) {
+  if (
+    !d ||
+    typeof d != "object" ||
+    !Array.isArray(d.clients) ||
+    !Array.isArray(d.sessions) ||
+    !Array.isArray(d.invoices)
+  ) {
+    alert("El archivo no parece una copia de Sesiona.");
+    return false;
+  }
+  if (
+    !confirm(
+      "Esto SUSTITUIRÁ los datos actuales por los de la copia (" +
+        d.clients.length +
+        " clientes, " +
+        d.sessions.length +
+        " citas, " +
+        d.invoices.length +
+        " facturas). ¿Continuar?",
+    )
+  )
+    return false;
+  localStorage.ccv9 = JSON.stringify(d);
+  return true;
+}
+function importData(input) {
+  let f = input.files && input.files[0];
+  if (!f) return;
+  let rd = new FileReader();
+  rd.onload = () => {
+    let d;
+    try {
+      d = JSON.parse(rd.result);
+    } catch (e) {
+      input.value = "";
+      return alert("No se pudo leer la copia: " + e.message);
+    }
+    input.value = "";
+    if (applyImport(d)) location.reload();
+  };
+  rd.readAsText(f);
 }
 function clearAll() {
   if (confirm("Vaciar datos locales")) {

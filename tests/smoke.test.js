@@ -315,6 +315,68 @@ S.set.autoBill=true;
 window.sessionForm();
 ok('modo auto: el aviso explica la factura al confirmar asistencia', /confirmas la asistencia/.test(document.getElementById('modal').innerHTML));
 
+console.log('\n== Importar copia de seguridad ==');
+ok('window.importData y applyImport definidos', typeof window.importData==='function' && typeof window.applyImport==='function');
+window.go('settings');
+ok('Ajustes ofrece botón "Importar copia"', /Importar copia/.test(document.getElementById('screen').innerHTML));
+window.__alert='';
+ok('applyImport rechaza un archivo que no es copia', window.applyImport({foo:1})===false && /no parece una copia/.test(window.__alert));
+const ccv9Backup = window.localStorage.ccv9;
+const fakeBackup = {set:{pro:'Restaurada'}, clients:[], sessions:[], invoices:[], payments:[], expenses:[]};
+ok('applyImport acepta una copia válida y la persiste', window.applyImport(fakeBackup)===true && JSON.parse(window.localStorage.ccv9).set.pro==='Restaurada');
+window.localStorage.ccv9 = ccv9Backup; // restaurar estado para el resto de tests
+
+console.log('\n== Eliminar citas ==');
+window.sessionForm(null,'sM');
+ok('el formulario de edición de cita ofrece Eliminar', /delSession\('sM'\)/.test(document.getElementById('modal').innerHTML));
+const invTotalBefore = S.invoices.length;
+window.delSession('sM');
+ok('la cita se elimina', !S.sessions.find(s=>s.id==='sM'));
+ok('su factura se conserva', S.invoices.length===invTotalBefore);
+
+console.log('\n== Eliminar clientes ==');
+window.clientForm('c1');
+ok('el formulario de edición de cliente ofrece Eliminar', /delClient\('c1'\)/.test(document.getElementById('modal').innerHTML));
+window.__alert='';
+window.delClient('c1');
+ok('cliente con facturas NO se puede borrar', !!window.S.clients.find(c=>c.id==='c1') && /facturas emitidas/.test(window.__alert));
+S.clients.push({id:'c3', name:'Temporal', sur:'', nif:'', phone:'', price:60, irpf:0, type:'particular', igicReg:'exento', amigo:false});
+S.sessions.push({id:'s3del', c:'c3', start:'2026-08-01T10:00', price:60, st:'programada', inv:'', rem:false, noBill:false});
+window.delClient('c3');
+ok('cliente sin facturas se borra junto a sus citas', !S.clients.find(c=>c.id==='c3') && !S.sessions.find(s=>s.id==='s3del'));
+
+console.log('\n== Cobros: listar y borrar ==');
+const invPay = S.invoices.find(i=>i.st!=='anulada');
+S.payments.push({id:'pDel', inv:invPay.id, date:'2026-07-01', amount:10, method:'bizum'});
+window.payForm(invPay.id);
+const payHtml2 = document.getElementById('modal').innerHTML;
+ok('registrar cobro lista los cobros existentes', /Cobros ya registrados/.test(payHtml2) && /delPayment\('pDel'\)/.test(document.getElementById('payList').innerHTML));
+window.delPayment('pDel');
+ok('el cobro se borra con confirmación', !S.payments.find(p=>p.id==='pDel'));
+
+console.log('\n== Calendario: rejilla dinámica ==');
+window.AV='cal'; window.CG=window.ymd(new Date()); window.go('agenda');
+const calHtml2 = document.getElementById('screen').innerHTML;
+ok('con citas a las 23:00-23:30 la rejilla se amplía (etiqueta 23:00)', /calHourLabel[^>]*>23:00/.test(calHtml2));
+ok('la rejilla mantiene el inicio a las 08:00', /calHourLabel[^>]*>08:00/.test(calHtml2));
+
+console.log('\n== Factura con IGIC "revisar": aviso visible ==');
+S.invoices.push({id:'iRev', c:'c1', num:'T-999/2026', date:'2026-07-01', due:'2026-07-31', concept:'Prueba', base:60, igic:0, irpf:0, total:60, st:'emitida', reg:'revisar'});
+window.seeInvoice('iRev');
+ok('la factura avisa del régimen pendiente de revisar', /pendiente de revisar/.test(document.getElementById('modal').innerHTML) && /sin IGIC/.test(document.getElementById('modal').innerHTML));
+window.seeInvoice(S.invoices[0].id);
+ok('las facturas normales no llevan el aviso', !/pendiente de revisar/.test(document.getElementById('modal').innerHTML));
+
+console.log('\n== Vendorización y service worker ==');
+const invoiceSrc = fs.readFileSync(path + '/assets/js/invoice.js', 'utf8');
+ok('el PDF carga primero la copia local vendorizada', /\/assets\/vendor\/html2pdf\.bundle\.min\.js/.test(invoiceSrc));
+ok('la copia vendorizada existe en el repo', fs.existsSync(path + '/assets/vendor/html2pdf.bundle.min.js'));
+const swSrc = fs.readFileSync(path + '/sw.js', 'utf8');
+ok('sw.js versiona el cache (sesiona-v2)', /sesiona-v2/.test(swSrc));
+ok('sw.js precachea el vendor', /assets\/vendor\/html2pdf\.bundle\.min\.js/.test(swSrc));
+ok('sw.js usa network-first para JS/CSS propios', /destination === 'script' \|\| request\.destination === 'style'/.test(swSrc));
+ok('sw.js cachea los CDN de OCR/PDF para uso offline', /tessdata\.projectnaptha\.com/.test(swSrc) && /CDN_CACHE/.test(swSrc));
+
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);
 process.exit(fail?1:0);

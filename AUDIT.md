@@ -117,13 +117,22 @@ Onboarding y wizard · facturación auto (IGIC 7% + IRPF, total exacto) y manual
 plantilla profesional de factura · cobros parciales y sello Pagada/Parcial · WhatsApp (wa.me con mensaje y enlaces SÍ/NO) ·
 fallback sin red de OCR y de PDF · exportación CSV/JSON · persistencia localStorage · SW + manifest (PWA) · demo `#demo` (3/3/3) y bloqueo de demo con datos.
 
-### Mejoras propuestas (no aplicadas)
-- **Importar la copia de seguridad**: existe Exportar pero NO Importar/restaurar desde la app (la copia solo se puede restaurar editando localStorage a mano). Es la mitad que falta de la mitigación de D4.
-- Clientes: no se pueden borrar/archivar; citas: no se pueden eliminar (solo cancelar); cobros: no se pueden corregir/borrar.
-- `sw.js`: `CACHE_NAME` fijo (`sesiona-v1`); tras un deploy los usuarios ven la versión anterior hasta la segunda carga (stale-while-revalidate). Considerar versionar el cache o avisar de "nueva versión disponible".
-- Régimen IGIC "revisar" calcula 0 de IGIC en silencio (como exento); convendría avisar en la factura o bloquear emisión.
-- Rejilla del calendario fija 8–21; hacerla configurable o expandirla si hay citas fuera.
-- Vendorizar CDNs (D3) sigue pendiente; sin red no hay OCR ni PDF (los fallbacks funcionan).
+### Mejoras propuestas → APLICADAS (2026-07-12, misma rama)
+| ID | Mejora | Implementación |
+|----|--------|----------------|
+| M1 | **Importar copia de seguridad** | Botón "Importar copia" en Ajustes: valida el JSON, confirma con recuento (clientes/citas/facturas), sustituye datos y recarga. Verificado el ciclo completo exportar → vaciar → importar en navegador |
+| M2 | **Borrar citas, clientes y cobros** | "Eliminar cita" en el formulario de edición (la factura asociada se conserva). "Eliminar cliente" bloqueado si tiene facturas (conservación fiscal); si no, borra también sus citas tras confirmar. "Registrar cobro" lista los cobros de la factura con "Borrar cobro" |
+| M3 | **Actualización fiable de la PWA** | `sw.js`: cache `sesiona-v2`; JS/CSS propios pasan a network-first con fallback a cache → un deploy se ve en la siguiente carga (antes: dos cargas por stale-while-revalidate) y offline sigue funcionando |
+| M4 | **Aviso IGIC "revisar"** | La factura muestra un aviso destacado ("emitida sin IGIC, confirmar con gestoría") cuando el régimen del cliente es `revisar`; también en el PDF |
+| M5 | **Rejilla del calendario dinámica** | Si hay citas antes de las 08:00 o después de las 21:00 en los 3 días visibles, la rejilla se amplía (hasta 00–24) en vez de aplastar los bloques |
+| M6 | **Vendorización CDNs (D3)** | `html2pdf` vendorizado en `assets/vendor/` (carga local primero, CDN de respaldo) → el PDF funciona 100 % offline. Tesseract no se vendoriza (worker+wasm+traineddata ≈ decenas de MB); en su lugar el SW cachea en runtime los CDN permitidos (`cdn.jsdelivr.net`, `unpkg.com`, `tessdata.projectnaptha.com`): tras el primer OCR con red, también funciona offline |
+
+Suite: 77 → **99 tests**. Verificación E2E adicional en navegador (import/export con archivo real, borrados, PDF sin red, rejilla, aviso IGIC, SW v2): sin hallazgos.
+
+### Ideas restantes (no bloqueantes)
+- Archivar clientes (ocultar sin borrar) para históricos largos.
+- Editar cobros in situ (hoy: borrar + volver a registrar).
+- Aviso "nueva versión disponible" con botón de recarga (hoy el deploy llega en la siguiente carga; suficiente en la práctica).
 
 ## 5. Notas operativas
 - Hay **PR #1 abierta** con todo el trabajo previo (agenda nueva, facturas PDF, OCR foto, bot). Decidir si se fusiona antes de empezar sprints (recomendado: fusionar y abrir `mejora/<tema>` desde main).
