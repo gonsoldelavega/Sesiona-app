@@ -54,17 +54,9 @@
   <script src="assets/js/branding.js"></script>
   <script src="assets/js/invoice.js"></script>
   <script src="assets/js/photo-import.js"></script>
-  <script>
-    window.addEventListener('load', function(){
-      try {
-        var pro = (window.S && S.set && (S.set.pro || '')) || '';
-        if (pro === 'Profesional') pro = '';
-        var name = String(pro).toUpperCase().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        document.title = 'Sesiona';
-        document.querySelectorAll('.brand').forEach(function(el){ el.innerHTML = 'Sesiona <span>'+name+'</span>'; });
-      } catch(e) {}
-    });
-  </script>
+  <!-- El nombre profesional de la cabecera lo actualiza updateBrand() en app.js
+       en cada render (el script anterior comprobaba window.S, que nunca existe
+       porque S se declara con let, y el nombre no se mostraba nunca). -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });

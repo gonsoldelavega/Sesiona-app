@@ -88,7 +88,44 @@ docs/                       ocr-setup.md, whatsapp-bot-setup.md
 
 **Sprint 6 — Pulido UX** (U2, U3): toasts, aria, contrastes.
 
-## 4. Notas operativas
+## 4. Auditoría de testing E2E (2026-07-12 · rama `claude/app-testing-improvements-oe8zsd`)
+
+Simulación completa con navegador real (Playwright + Chromium, TZ `Atlantic/Canary`, viewport móvil):
+onboarding, clientes, agenda lista/calendario, facturación auto/manual, cobros, anulación, avisos,
+gastos, gestoría, ajustes, demo, foto-agenda sin red, envío PDF sin red, persistencia y PWA.
+
+### Bugs encontrados y CORREGIDOS en esta rama
+| ID | Bug | Fix |
+|----|-----|-----|
+| T1 | **Fechas UTC en calendario**: `shiftCG/shiftCGfrom/addDays/today` usaban `toISOString()` (UTC). En Canarias en verano (UTC+1) el calendario arrancaba en *ayer* y cada ‹/› derivaba un día. También afectaba al fin del filtro "Mes" | Helper `ymd()` con fecha local; suite de tests ahora corre con `TZ=Atlantic/Canary` |
+| T2 | La métrica **"Pendiente"** del panel contaba facturas **anuladas** | `metrics().pend` filtra `st!='anulada'` |
+| T3 | El **nombre profesional nunca aparecía en la cabecera**: el script inline comprobaba `window.S`, que no existe (`let S` no cuelga de window) | `updateBrand()` en `render()`; script inline eliminado |
+| T4 | Escapado HTML incompleto: selects de cliente (cita/factura), hero "Próxima cita", modal factura creada, inputs pref/wa de Ajustes | `esc()` aplicado |
+| T5 | Aviso del formulario de cita prometía factura automática aunque el modo por defecto es **manual** | Texto dinámico según `autoBillOn()` |
+| T6 | "Crear factura" facturaba a clientes **amigo** / citas *no facturar* sin aviso, con botón destacado | Confirmación previa + botón secundario |
+| T7 | Citas fuera de la rejilla 8–21 (p. ej. 23:00) se pintaban en `top:100%` (invisibles) en el calendario | Clamp dentro de la rejilla |
+| T8 | Facturas anuladas mostraban "pendiente X €" y ofrecían Cobrar/Anular/WhatsApp; `payForm` las listaba | Ocultas esas acciones; `payForm` filtra anuladas |
+| T9 | **Gastos sin editar/borrar**: un error era permanente | `expenseForm(id)`, `saveExpense(id)`, `delExpense(id)` + fecha visible en la lista |
+| T10 | Foto-agenda: la entrada manual solo era accesible si el OCR fallaba | Botón "Introducir citas a mano" en la pantalla 1 |
+| T11 | Copia de seguridad con nombre legado `consulta-clara-canarias-v9.json`; `clearAll` no limpiaba la clave antigua `ccc` (los datos "resucitaban") | `sesiona-copia-<fecha>.json`; se limpia también `ccc` |
+| — | Pretty-print de `app.js` (D1) aplicado con prettier, sin cambios de lógica | Commit propio |
+
+Suite ampliada: 51 → **77 tests** (fechas locales, anuladas, escapado, confirmación amigo, gastos, calendario, copia, foto manual, aviso dinámico).
+
+### Verificado OK en la simulación
+Onboarding y wizard · facturación auto (IGIC 7% + IRPF, total exacto) y manual · numeración correlativa por año ·
+plantilla profesional de factura · cobros parciales y sello Pagada/Parcial · WhatsApp (wa.me con mensaje y enlaces SÍ/NO) ·
+fallback sin red de OCR y de PDF · exportación CSV/JSON · persistencia localStorage · SW + manifest (PWA) · demo `#demo` (3/3/3) y bloqueo de demo con datos.
+
+### Mejoras propuestas (no aplicadas)
+- **Importar la copia de seguridad**: existe Exportar pero NO Importar/restaurar desde la app (la copia solo se puede restaurar editando localStorage a mano). Es la mitad que falta de la mitigación de D4.
+- Clientes: no se pueden borrar/archivar; citas: no se pueden eliminar (solo cancelar); cobros: no se pueden corregir/borrar.
+- `sw.js`: `CACHE_NAME` fijo (`sesiona-v1`); tras un deploy los usuarios ven la versión anterior hasta la segunda carga (stale-while-revalidate). Considerar versionar el cache o avisar de "nueva versión disponible".
+- Régimen IGIC "revisar" calcula 0 de IGIC en silencio (como exento); convendría avisar en la factura o bloquear emisión.
+- Rejilla del calendario fija 8–21; hacerla configurable o expandirla si hay citas fuera.
+- Vendorizar CDNs (D3) sigue pendiente; sin red no hay OCR ni PDF (los fallbacks funcionan).
+
+## 5. Notas operativas
 - Hay **PR #1 abierta** con todo el trabajo previo (agenda nueva, facturas PDF, OCR foto, bot). Decidir si se fusiona antes de empezar sprints (recomendado: fusionar y abrir `mejora/<tema>` desde main).
 - Prohibiciones vigentes: sin force-push, sin tocar BD destructivamente, sin merge a main sin aprobación.
 - Pendientes de Nando: nº WhatsApp dedicado (más adelante), service_role en `.env` del VPS, decidir S3.

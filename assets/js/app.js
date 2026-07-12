@@ -66,10 +66,19 @@ const $ = (id) => document.getElementById(id),
     }),
   gid = (p) => p + Date.now() + Math.random().toString(36).slice(2, 6),
   save = () => (localStorage.ccv9 = JSON.stringify(S)),
-  today = () => new Date().toISOString().slice(0, 10),
+  today = () => ymd(new Date()),
   client = (id) => S.clients.find((c) => c.id == id),
   sum = (a, k) => a.reduce((s, x) => s + Number(x[k] || 0), 0),
   badge = (t, c = "") => '<span class="pill ' + c + '">' + t + "</span>";
+function ymd(d) {
+  return (
+    d.getFullYear() +
+    "-" +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(d.getDate()).padStart(2, "0")
+  );
+}
 function esc(v) {
   return String(v == null ? "" : v)
     .replace(/&/g, "&amp;")
@@ -81,7 +90,7 @@ function esc(v) {
 function addDays(n) {
   let d = new Date();
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return ymd(d);
 }
 function q(d) {
   return Math.ceil((new Date(d).getMonth() + 1) / 3);
@@ -220,8 +229,20 @@ function go(v) {
   V = v;
   render();
 }
+function updateBrand() {
+  let pro = S.set.pro || "";
+  if (pro == "Profesional") pro = "";
+  document
+    .querySelectorAll(".brand")
+    .forEach(
+      (el) =>
+        (el.innerHTML =
+          "Sesiona <span>" + esc(String(pro).toUpperCase()) + "</span>"),
+    );
+}
 function render() {
   nav();
+  updateBrand();
   $("todayLine").textContent = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
     day: "numeric",
@@ -288,7 +309,7 @@ function metrics() {
     fac: sum(inv, "total"),
     cob: sum(pay, "amount"),
     gas: sum(ex, "total"),
-    pend: S.invoices.reduce((a, i) => a + bal(i), 0),
+    pend: S.invoices.filter((i) => i.st != "anulada").reduce((a, i) => a + bal(i), 0),
     today: todaySessions().length,
     alerts: dueSessions().length + pendingInv().length,
   };
@@ -365,7 +386,7 @@ function agenda(r) {
       '</div><div class="sub">' +
       fmtDay(next.start) +
       " · " +
-      (c?.name || "Cliente") +
+      esc(c?.name || "Cliente") +
       "</div></div>";
   } else
     nextHtml =
@@ -401,7 +422,7 @@ function agenda(r) {
 function shiftCG(n) {
   let d = new Date(CG + "T00:00");
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return ymd(d);
 }
 function agendaListBody() {
   let t0 = today(),
@@ -418,9 +439,7 @@ function agendaListBody() {
     });
   } else if (F == "month") {
     let n2 = new Date(),
-      end = new Date(n2.getFullYear(), n2.getMonth() + 1, 0)
-        .toISOString()
-        .slice(0, 10);
+      end = ymd(new Date(n2.getFullYear(), n2.getMonth() + 1, 0));
     list = all.filter((s) => {
       let ds = String(s.start).slice(0, 10);
       return ds >= t0 && ds <= end;
@@ -494,7 +513,7 @@ function agendaCalBody() {
             .map((s) => {
               let dt = new Date(s.start),
                 h = dt.getHours() + dt.getMinutes() / 60,
-                top = Math.max(0, Math.min(rows, h - START_H)),
+                top = Math.max(0, Math.min(rows - 0.35, h - START_H)),
                 endH = Math.max(START_H, Math.min(END_H, h + 50 / 60)),
                 height = Math.max(0.35, endH - (START_H + top)),
                 c = client(s.c),
@@ -577,7 +596,7 @@ function agendaCal(r) {
 function shiftCGfrom(base, n) {
   let d = new Date(base + "T00:00");
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return ymd(d);
 }
 function sessionCard(s) {
   let c = client(s.c),
@@ -630,7 +649,9 @@ function sessionCard(s) {
       ? '<button class="action" onclick="seeInvoice(\'' +
         s.inv +
         "')\">Ver factura</button>"
-      : '<button class="action main" onclick="invoiceSession(\'' +
+      : '<button class="action' +
+        (billable(s) ? " main" : "") +
+        '" onclick="invoiceSession(\'' +
         s.id +
         "')\">Crear factura</button>") +
     '<button class="action bad" onclick="mark(\'' +
@@ -710,22 +731,28 @@ function invoices(r) {
               esc(c?.name || "Cliente") +
               " · " +
               fmt(i.total) +
-              " · pendiente " +
-              fmt(bal(i)) +
+              (i.st == "anulada" ? "" : " · pendiente " + fmt(bal(i))) +
               "</p><p>" +
-              badge(i.st || "emitida", bal(i) > 0 ? "warn" : "ok") +
+              badge(
+                i.st || "emitida",
+                i.st == "anulada" ? "badPill" : bal(i) > 0 ? "warn" : "ok",
+              ) +
               (i.sent
                 ? badge("WhatsApp enviado", "ok")
                 : badge("sin enviar", "warn")) +
               '</p><div class="actions"><button class="action" onclick="seeInvoice(\'' +
               i.id +
-              '\')">Ver/PDF</button><button class="action main" onclick="sendInvoice(\'' +
-              i.id +
-              '\')">WhatsApp</button><button class="action" onclick="payForm(\'' +
-              i.id +
-              '\')">Cobrar</button><button class="action bad" onclick="voidInv(\'' +
-              i.id +
-              "')\">Anular</button></div></div>"
+              '\')">Ver/PDF</button>' +
+              (i.st == "anulada"
+                ? ""
+                : '<button class="action main" onclick="sendInvoice(\'' +
+                  i.id +
+                  '\')">WhatsApp</button><button class="action" onclick="payForm(\'' +
+                  i.id +
+                  '\')">Cobrar</button><button class="action bad" onclick="voidInv(\'' +
+                  i.id +
+                  "')\">Anular</button>") +
+              "</div></div>"
             );
           })
           .join("")) +
@@ -785,12 +812,18 @@ function expenses(r) {
               esc(e.cat) +
               " · " +
               fmt(e.total) +
+              " · " +
+              new Date(e.date + "T00:00").toLocaleDateString("es-ES") +
               "</p><p>" +
               badge(e.ded || "revisar", "warn") +
               (e.doc
                 ? badge("justificante", "ok")
                 : badge("sin justificante", "badPill")) +
-              "</p></div>",
+              '</p><div class="actions"><button class="action" onclick="expenseForm(\'' +
+              e.id +
+              '\')">Editar</button><button class="action bad" onclick="delExpense(\'' +
+              e.id +
+              "')\">Borrar</button></div></div>",
           )
           .join("")) +
     "</div>";
@@ -857,7 +890,7 @@ function settings(r) {
     '</textarea></div><div class="field"><label>Pie legal factura</label><textarea id="foot">' +
     esc(s.foot || "") +
     '</textarea></div></div><div class="item" style="margin-top:12px"><h3>Fiscalidad y numeración</h3><div class="row"><div class="field"><label>Prefijo factura</label><input id="pref" value="' +
-    s.pref +
+    esc(s.pref) +
     '"></div><div class="field"><label>Siguiente Nº</label><input id="num" type="number" value="' +
     s.num +
     '"></div></div><div class="row"><div class="field"><label>IGIC %</label><input id="igic" type="number" value="' +
@@ -865,7 +898,7 @@ function settings(r) {
     '"></div><div class="field"><label>Vencimiento días</label><input id="due" type="number" value="' +
     s.due +
     '"></div></div><div class="field"><label>Prefijo WhatsApp país</label><input id="wa" value="' +
-    s.wa +
+    esc(s.wa) +
     '"></div></div><div class="item" style="margin-top:12px"><h3>Facturación automática</h3><div class="field"><label>Al finalizar una cita</label><select id="abill"><option value="1" ' +
     (autoBillOn() ? "selected" : "") +
     '>Generar factura automáticamente (salvo amigos)</option><option value="0" ' +
@@ -890,7 +923,7 @@ function invoiceCreated(invId) {
     '<h2>Factura creada</h2><div class="success"><b>' +
       i.num +
       "</b><p>" +
-      (c.name || "Cliente") +
+      esc(c.name || "Cliente") +
       " · " +
       fmt(i.total) +
       '</p><p>Factura generada desde la cita.</p><p class="muted">Siguiente paso recomendado: enviar WhatsApp o registrar cobro.</p></div><div class="grid"><button class="btn" onclick="seeInvoice(\'' +
@@ -982,9 +1015,7 @@ function sessionForm(cid, id) {
             '<option value="' +
             c.id +
             '">' +
-            c.name +
-            " " +
-            (c.sur || "") +
+            esc(c.name + " " + (c.sur || "")) +
             "</option>",
         )
         .join("") +
@@ -996,7 +1027,11 @@ function sessionForm(cid, id) {
       (s.price || 60) +
       '"></div><div class="field"><label>Estado</label><select id="sst"><option value="programada">Programada</option><option value="asistida">Asistida</option><option value="finalizada">Finalizada</option><option value="cancelada">Cancelada</option><option value="no_presentada">No presentada</option></select></div></div><div class="field"><label>Facturación de la cita</label><select id="sbill"><option value="0">Normal</option><option value="1">No facturar esta cita</option></select></div><div class="field"><label>Notas administrativas</label><textarea id="snotes">' +
       esc(s.notes || "") +
-      '</textarea></div><p class="notice">Guardar la cita no genera factura. La factura se crea cuando confirmas la asistencia con el botón Asistida/Finalizada en la agenda (salvo amigos o citas marcadas como no facturar).</p><button class="btn" onclick="saveSession(\'' +
+      '</textarea></div><p class="notice">' +
+      (autoBillOn()
+        ? "Guardar la cita no genera factura. La factura se crea cuando confirmas la asistencia con el botón Asistida/Finalizada en la agenda (salvo amigos o citas marcadas como no facturar)."
+        : "Guardar la cita no genera factura. Tienes la facturación en modo manual: usa el botón Crear factura de la cita cuando quieras emitirla.") +
+      '</p><button class="btn" onclick="saveSession(\'' +
       (id || "") +
       "')\">Guardar</button>" +
       (id
@@ -1080,7 +1115,7 @@ function invoiceForm() {
   openM(
     '<h2>Nueva factura</h2><div class="field"><label>Cliente</label><select id="ic">' +
       S.clients
-        .map((c) => '<option value="' + c.id + '">' + c.name + "</option>")
+        .map((c) => '<option value="' + c.id + '">' + esc(c.name) + "</option>")
         .join("") +
       '</select></div><div class="field"><label>Concepto</label><input id="concept" value="Sesión profesional"></div><div class="row"><div class="field"><label>Cantidad</label><input id="qty" type="number" value="1"></div><div class="field"><label>Precio</label><input id="unit" type="number" value="60"></div></div><button class="btn" onclick="saveInvoiceManual()">Emitir</button>',
   );
@@ -1110,6 +1145,15 @@ function saveInvoiceManual() {
 function invoiceSession(id) {
   let s = S.sessions.find((x) => x.id == id);
   if (s.inv) return invoiceCreated(s.inv);
+  if (
+    !billable(s) &&
+    !confirm(
+      isAmigo(client(s.c))
+        ? "Este cliente está marcado como amigo / sin factura. ¿Crear la factura igualmente?"
+        : "Esta cita está marcada como no facturar. ¿Crear la factura igualmente?",
+    )
+  )
+    return;
   let inv = makeInvoiceFromSession(s);
   save();
   invoiceCreated(inv.id);
@@ -1159,17 +1203,18 @@ function seeInvoice(id) {
   );
 }
 function payForm(id) {
-  if (!S.invoices.length) return alert("Crea factura primero");
-  let i = S.invoices.find((x) => x.id == id) || S.invoices[0];
+  let payable = S.invoices.filter((x) => x.st != "anulada");
+  if (!payable.length) return alert("Crea factura primero");
+  let i = payable.find((x) => x.id == id) || payable[0];
   openM(
     '<h2>Registrar cobro</h2><div class="field"><label>Factura</label><select id="pinv">' +
-      S.invoices
+      payable
         .map(
           (x) =>
             '<option value="' +
             x.id +
             '">' +
-            x.num +
+            esc(x.num) +
             " · " +
             fmt(bal(x)) +
             "</option>",
@@ -1193,16 +1238,30 @@ function savePay() {
   });
   closeM();
 }
-function expenseForm() {
+function expenseForm(id) {
+  let e = id ? S.expenses.find((x) => x.id == id) : {};
   openM(
-    '<h2>Nuevo gasto</h2><div class="field"><label>Proveedor</label><input id="eprov"></div><div class="row"><div class="field"><label>Fecha</label><input id="edate" type="date" value="' +
-      today() +
-      '"></div><div class="field"><label>Total</label><input id="etotal" type="number" value="0"></div></div><div class="row"><div class="field"><label>IGIC soportado</label><input id="eigic" type="number" value="0"></div><div class="field"><label>Categoría</label><select id="ecat"><option>gestoría</option><option>software</option><option>formación</option><option>alquiler</option><option>material</option><option>otros</option></select></div></div><div class="field"><label>Deducibilidad</label><select id="eded"><option>revisar</option><option>deducible</option><option>parcial</option><option>no deducible</option></select></div><div class="field"><label>Justificante</label><select id="edoc"><option value="0">No</option><option value="1">Sí</option></select></div><button class="btn" onclick="saveExpense()">Guardar</button>',
+    "<h2>" +
+      (id ? "Editar" : "Nuevo") +
+      ' gasto</h2><div class="field"><label>Proveedor</label><input id="eprov" value="' +
+      esc(e.prov || "") +
+      '"></div><div class="row"><div class="field"><label>Fecha</label><input id="edate" type="date" value="' +
+      (e.date || today()) +
+      '"></div><div class="field"><label>Total</label><input id="etotal" type="number" value="' +
+      (e.total != null ? e.total : 0) +
+      '"></div></div><div class="row"><div class="field"><label>IGIC soportado</label><input id="eigic" type="number" value="' +
+      (e.igic != null ? e.igic : 0) +
+      '"></div><div class="field"><label>Categoría</label><select id="ecat"><option>gestoría</option><option>software</option><option>formación</option><option>alquiler</option><option>material</option><option>otros</option></select></div></div><div class="field"><label>Deducibilidad</label><select id="eded"><option>revisar</option><option>deducible</option><option>parcial</option><option>no deducible</option></select></div><div class="field"><label>Justificante</label><select id="edoc"><option value="0">No</option><option value="1">Sí</option></select></div><button class="btn" onclick="saveExpense(\'' +
+      (id || "") +
+      "')\">Guardar</button>",
   );
+  if (e.cat) ecat.value = e.cat;
+  if (e.ded) eded.value = e.ded;
+  edoc.value = e.doc ? "1" : "0";
 }
-function saveExpense() {
-  S.expenses.push({
-    id: gid("e"),
+function saveExpense(id) {
+  let e = id ? S.expenses.find((x) => x.id == id) : { id: gid("e") };
+  Object.assign(e, {
     prov: eprov.value || "Proveedor",
     date: edate.value,
     total: Number(etotal.value || 0),
@@ -1211,7 +1270,15 @@ function saveExpense() {
     ded: eded.value,
     doc: edoc.value == "1",
   });
+  if (!id) S.expenses.push(e);
   closeM();
+}
+function delExpense(id) {
+  if (confirm("¿Borrar este gasto?")) {
+    S.expenses = S.expenses.filter((x) => x.id != id);
+    save();
+    render();
+  }
 }
 function sendSession(id) {
   let s = S.sessions.find((x) => x.id == id);
@@ -1293,7 +1360,7 @@ function exportData() {
   a.href = URL.createObjectURL(
     new Blob([JSON.stringify(S, null, 2)], { type: "application/json" }),
   );
-  a.download = "consulta-clara-canarias-v9.json";
+  a.download = "sesiona-copia-" + today() + ".json";
   a.click();
   S.set.lastExport = Date.now();
   save();
@@ -1301,6 +1368,7 @@ function exportData() {
 function clearAll() {
   if (confirm("Vaciar datos locales")) {
     localStorage.removeItem("ccv9");
+    localStorage.removeItem("ccc");
     location.reload();
   }
 }
