@@ -568,3 +568,22 @@
     margin: 14mm 14mm 16mm;
   }
 }
+
+/* ── Aviso: régimen IGIC pendiente de revisar ───────────────────────── */
+.invAvisoRevisar {
+  margin: 0 40px 18px;
+  background: #fdf1ef;
+  color: #a94444;
+  border: 1px solid #efc9c4;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .invAvisoRevisar {
+    margin-left: 24px !important;
+    margin-right: 24px !important;
+  }
+}

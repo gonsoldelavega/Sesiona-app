@@ -98,6 +98,16 @@
       anuladaHTML = '<div class="invAnulada">ANULADA</div>';
     }
 
+    /* — Aviso si el régimen de IGIC está pendiente de revisar —
+       calc() trata "revisar" como 0 de IGIC; no debe pasar en silencio. */
+    var avisoRevisarHTML = '';
+    if (reg !== 'exento' && reg !== 'general') {
+      avisoRevisarHTML =
+        '<div class="invAvisoRevisar">⚠ Régimen de IGIC del cliente pendiente de revisar: ' +
+        'esta factura se ha emitido <strong>sin IGIC</strong>. Confirmar con la gestoría ' +
+        'antes de darla por definitiva.</div>';
+    }
+
     /* — Pie legal — */
     var pieTexto = esc(s.foot || 'Cálculo orientativo. Revisar con gestoría.');
     var pagoTexto = esc(s.pay || '');
@@ -189,6 +199,9 @@
         /* Estado de cobro */
         (estadoCobro ? '<div class="invEstadoCobro">' + estadoCobro + '</div>' : '') +
 
+        /* Aviso IGIC pendiente de revisar */
+        avisoRevisarHTML +
+
         '<hr class="invSep">' +
 
         /* Forma de pago */
@@ -221,23 +234,35 @@
      El PDF se genera en el cliente con html2pdf.js (carga diferida por CDN).
      ════════════════════════════════════════════════════════════════ */
   var _h2pLoaded = false, _h2pLoading = false, _h2pCbs = [];
+  /* Copia vendorizada primero (funciona offline); CDN como respaldo. */
+  var H2P_SOURCES = [
+    '/assets/vendor/html2pdf.bundle.min.js',
+    'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js'
+  ];
+  function loadScriptSeq(urls, done) {
+    if (!urls.length) {
+      done(new Error('No se pudo cargar el generador de PDF (sin conexión o bloqueado).'));
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = urls[0];
+    s.onload = function () { done(null); };
+    s.onerror = function () {
+      s.remove();
+      loadScriptSeq(urls.slice(1), done);
+    };
+    document.head.appendChild(s);
+  }
   function loadHtml2Pdf(cb) {
     if (_h2pLoaded || window.html2pdf) { _h2pLoaded = true; cb(null); return; }
     _h2pCbs.push(cb);
     if (_h2pLoading) return;
     _h2pLoading = true;
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js';
-    s.onload = function () {
-      _h2pLoaded = true; _h2pLoading = false;
-      _h2pCbs.forEach(function (f) { f(null); }); _h2pCbs = [];
-    };
-    s.onerror = function () {
+    loadScriptSeq(H2P_SOURCES, function (err) {
       _h2pLoading = false;
-      var err = new Error('No se pudo cargar el generador de PDF (sin conexión o bloqueado).');
+      if (!err) _h2pLoaded = true;
       _h2pCbs.forEach(function (f) { f(err); }); _h2pCbs = [];
-    };
-    document.head.appendChild(s);
+    });
   }
 
   function makeInvoicePdfFile(id, cb) {

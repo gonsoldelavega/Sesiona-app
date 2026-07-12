@@ -332,6 +332,7 @@
         '<button class="btn alt" style="margin-top:8px;" onclick="window._piGoToReview([])">Introducir citas a mano</button>' +
       '</div>' +
       '<div class="actions" style="margin-top:16px;">' +
+        '<button class="btn alt" onclick="window._piGoToReview([], null, (document.getElementById(\'piDate\')||{}).value)">✍️ Introducir citas a mano</button>' +
         '<button class="btn alt" onclick="closeM()">Cancelar</button>' +
       '</div>'
     );

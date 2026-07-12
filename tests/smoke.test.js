@@ -1,3 +1,7 @@
+// Ejecutar con la zona horaria real del público objetivo (Canarias, UTC+0/+1).
+// Con TZ UTC los bugs de fecha por toISOString() quedaban ocultos.
+process.env.TZ = process.env.TZ || 'Atlantic/Canary';
+
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const path = require('path').resolve(__dirname, '..');
@@ -103,7 +107,8 @@ ok('factura: pantalla de envío/preparación PDF', /Enviar factura/.test(m3) && 
 console.log('\n== Agenda: próxima cita y agrupación por día ==');
 // Limpiar sesiones y crear citas: una hoy futura y una pasada (orden sin sentido)
 S.sessions.length=0;
-function iso(daysFromNow, hhmm){const d=new Date(Date.now()+daysFromNow*86400000);return d.toISOString().slice(0,10)+'T'+hhmm;}
+function ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function iso(daysFromNow, hhmm){const d=new Date(Date.now()+daysFromNow*86400000);return ymdLocal(d)+'T'+hhmm;}
 S.sessions.push({id:'sa',c:'c1',start:iso(0,'23:30'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // hoy tarde-noche (futura)
 S.sessions.push({id:'sb',c:'c1',start:iso(3,'10:00'),price:60,st:'programada',inv:'',rem:false,noBill:false}); // dentro de 3 días
 window.F='next';
@@ -128,7 +133,7 @@ ok('window.newSessionAt definido', typeof window.newSessionAt==='function');
 console.log('\n== Crear cita: default mañana 16:00 ==');
 window.sessionForm();
 const sf = document.getElementById('modal').innerHTML;
-const tomorrow = new Date(Date.now()+86400000).toISOString().slice(0,10);
+const tomorrow = ymdLocal(new Date(Date.now()+86400000));
 ok('fecha por defecto = mañana', sf.indexOf('value="'+tomorrow+'"')>-1);
 ok('hora por defecto = 16', /<option value="16" selected(?:="")?>/.test(sf));
 
@@ -211,6 +216,166 @@ const wizHtml = document.getElementById('modal').innerHTML;
 ok('asistente: incluye campo obnif', /id="obnif"/.test(wizHtml));
 ok('asistente: incluye campo obpro', /id="obpro"/.test(wizHtml));
 ok('window.saveWizard definido', typeof window.saveWizard==='function');
+
+console.log('\n== Fechas locales (bug TZ Canarias/verano) ==');
+ok('window.ymd definido', typeof window.ymd==='function');
+ok('ymd() devuelve la fecha LOCAL (base de today/addDays)', window.ymd(new Date())===ymdLocal(new Date()));
+ok('shiftCGfrom(base,0) no retrocede un día', window.shiftCGfrom('2026-07-15',0)==='2026-07-15');
+ok('shiftCGfrom(base,1) avanza exactamente un día', window.shiftCGfrom('2026-07-15',1)==='2026-07-16');
+window.CG='2026-07-15';
+const cgFwd = window.shiftCG(3);
+window.CG=cgFwd;
+ok('shiftCG ida y vuelta es simétrico', (window.CG=window.shiftCG(-3), window.CG)==='2026-07-15');
+window.CG=window.ymd(new Date());
+
+console.log('\n== Panel: "Pendiente" excluye facturas anuladas ==');
+const invPend = S.invoices.find(i => window.bal(i) > 0) || S.invoices[0];
+const pendConInv = window.metrics().pend;
+invPend.st = 'anulada';
+const pendSinInv = window.metrics().pend;
+ok('anular una factura reduce el Pendiente del panel', pendSinInv < pendConInv || (pendConInv===0 && pendSinInv===0));
+
+console.log('\n== Facturas anuladas en listas ==');
+window.go('invoices');
+const invListHtml = document.getElementById('screen').innerHTML;
+ok('la factura anulada no muestra botón Cobrar', !new RegExp('payForm\\(\''+invPend.id+'\'\\)').test(invListHtml));
+window.payForm();
+const payHtml = document.getElementById('modal').innerHTML;
+ok('payForm no ofrece facturas anuladas', payHtml.indexOf(invPend.id)===-1);
+
+console.log('\n== Escapado en selects de cliente ==');
+S.clients.push({id:'cx', name:'<b>Mal</b>', sur:"O'Brien", nif:'', phone:'', price:60, irpf:0, type:'particular', igicReg:'exento', amigo:false});
+window.sessionForm();
+const sfx = document.getElementById('modal').innerHTML;
+ok('sessionForm escapa el nombre del cliente', sfx.indexOf('&lt;b&gt;Mal&lt;/b&gt;')>-1 && sfx.indexOf('<b>Mal</b>')===-1);
+window.invoiceForm();
+const ifx = document.getElementById('modal').innerHTML;
+ok('invoiceForm escapa el nombre del cliente', ifx.indexOf('&lt;b&gt;Mal&lt;/b&gt;')>-1);
+S.clients.pop();
+
+console.log('\n== Facturar a un amigo pide confirmación ==');
+const sAmigo={id:'sAmigo', c:'c2', start:'2026-06-07T10:00', price:50, st:'finalizada', inv:'', rem:false, noBill:false};
+S.sessions.push(sAmigo);
+const invAmigoBefore=S.invoices.length;
+window.confirm=function(){ window.__confirmMsg=arguments[0]; return false; };
+window.invoiceSession('sAmigo');
+ok('con confirmación rechazada NO se factura al amigo', S.invoices.length===invAmigoBefore && !sAmigo.inv);
+ok('el mensaje avisa de que es amigo/sin factura', /amigo/i.test(window.__confirmMsg||''));
+window.confirm=function(){ return true; };
+window.invoiceSession('sAmigo');
+ok('con confirmación aceptada SÍ se factura', S.invoices.length===invAmigoBefore+1 && !!sAmigo.inv);
+
+console.log('\n== Cabecera con nombre profesional ==');
+ok('window.updateBrand definido', typeof window.updateBrand==='function');
+S.set.pro='Consulta Vega';
+window.render();
+ok('la cabecera muestra el nombre en cada render', /CONSULTA VEGA/.test(document.querySelector('.brand').innerHTML));
+
+console.log('\n== Calendario: citas fuera de la rejilla 8-21 siguen visibles ==');
+S.sessions.push({id:'sLate', c:'c1', start:window.ymd(new Date())+'T23:00', price:60, st:'programada', inv:'', rem:false, noBill:false});
+window.AV='cal'; window.CG=window.ymd(new Date()); window.go('agenda');
+const calHtml = document.getElementById('screen').innerHTML;
+ok('la cita de las 23:00 aparece en el calendario', /23:00/.test(calHtml));
+ok('la cita de las 23:00 no queda en top:100%', !/top:100%/.test(calHtml));
+
+console.log('\n== Gastos: editar y borrar ==');
+window.expenseForm();
+document.getElementById('eprov').value='Gestoría Test';
+document.getElementById('edate').value='2026-06-01';
+document.getElementById('etotal').value='50';
+document.getElementById('eigic').value='3';
+window.saveExpense('');
+const exp1=S.expenses[S.expenses.length-1];
+ok('gasto creado', exp1.prov==='Gestoría Test' && exp1.total===50);
+window.expenseForm(exp1.id);
+document.getElementById('etotal').value='75';
+window.saveExpense(exp1.id);
+ok('gasto editado (total actualizado)', exp1.total===75 && S.expenses[S.expenses.length-1].id===exp1.id);
+const expCount=S.expenses.length;
+window.delExpense(exp1.id);
+ok('gasto borrado con confirmación', S.expenses.length===expCount-1);
+window.go('expenses');
+const expHtml=document.getElementById('screen').innerHTML;
+ok('la lista de gastos ofrece Editar/Borrar', /expenseForm\(/.test(expHtml) || /Sin gastos/.test(expHtml));
+
+console.log('\n== Copia de seguridad ==');
+ok('el archivo de copia se llama sesiona-copia-<fecha>.json', /sesiona-copia-/.test(window.exportData.toString()));
+ok('clearAll limpia también la clave antigua ccc', /removeItem\("ccc"\)/.test(window.clearAll.toString()));
+
+console.log('\n== Foto agenda: entrada manual accesible ==');
+window.photoImport();
+const piHtml = document.getElementById('modal').innerHTML;
+ok('pantalla de foto ofrece "Introducir citas a mano"', /Introducir citas a mano/.test(piHtml));
+
+console.log('\n== Aviso del formulario coherente con el modo de facturación ==');
+S.set.autoBill=false;
+window.sessionForm();
+ok('modo manual: el aviso no promete factura automática', /modo manual/.test(document.getElementById('modal').innerHTML));
+S.set.autoBill=true;
+window.sessionForm();
+ok('modo auto: el aviso explica la factura al confirmar asistencia', /confirmas la asistencia/.test(document.getElementById('modal').innerHTML));
+
+console.log('\n== Importar copia de seguridad ==');
+ok('window.importData y applyImport definidos', typeof window.importData==='function' && typeof window.applyImport==='function');
+window.go('settings');
+ok('Ajustes ofrece botón "Importar copia"', /Importar copia/.test(document.getElementById('screen').innerHTML));
+window.__alert='';
+ok('applyImport rechaza un archivo que no es copia', window.applyImport({foo:1})===false && /no parece una copia/.test(window.__alert));
+const ccv9Backup = window.localStorage.ccv9;
+const fakeBackup = {set:{pro:'Restaurada'}, clients:[], sessions:[], invoices:[], payments:[], expenses:[]};
+ok('applyImport acepta una copia válida y la persiste', window.applyImport(fakeBackup)===true && JSON.parse(window.localStorage.ccv9).set.pro==='Restaurada');
+window.localStorage.ccv9 = ccv9Backup; // restaurar estado para el resto de tests
+
+console.log('\n== Eliminar citas ==');
+window.sessionForm(null,'sM');
+ok('el formulario de edición de cita ofrece Eliminar', /delSession\('sM'\)/.test(document.getElementById('modal').innerHTML));
+const invTotalBefore = S.invoices.length;
+window.delSession('sM');
+ok('la cita se elimina', !S.sessions.find(s=>s.id==='sM'));
+ok('su factura se conserva', S.invoices.length===invTotalBefore);
+
+console.log('\n== Eliminar clientes ==');
+window.clientForm('c1');
+ok('el formulario de edición de cliente ofrece Eliminar', /delClient\('c1'\)/.test(document.getElementById('modal').innerHTML));
+window.__alert='';
+window.delClient('c1');
+ok('cliente con facturas NO se puede borrar', !!window.S.clients.find(c=>c.id==='c1') && /facturas emitidas/.test(window.__alert));
+S.clients.push({id:'c3', name:'Temporal', sur:'', nif:'', phone:'', price:60, irpf:0, type:'particular', igicReg:'exento', amigo:false});
+S.sessions.push({id:'s3del', c:'c3', start:'2026-08-01T10:00', price:60, st:'programada', inv:'', rem:false, noBill:false});
+window.delClient('c3');
+ok('cliente sin facturas se borra junto a sus citas', !S.clients.find(c=>c.id==='c3') && !S.sessions.find(s=>s.id==='s3del'));
+
+console.log('\n== Cobros: listar y borrar ==');
+const invPay = S.invoices.find(i=>i.st!=='anulada');
+S.payments.push({id:'pDel', inv:invPay.id, date:'2026-07-01', amount:10, method:'bizum'});
+window.payForm(invPay.id);
+const payHtml2 = document.getElementById('modal').innerHTML;
+ok('registrar cobro lista los cobros existentes', /Cobros ya registrados/.test(payHtml2) && /delPayment\('pDel'\)/.test(document.getElementById('payList').innerHTML));
+window.delPayment('pDel');
+ok('el cobro se borra con confirmación', !S.payments.find(p=>p.id==='pDel'));
+
+console.log('\n== Calendario: rejilla dinámica ==');
+window.AV='cal'; window.CG=window.ymd(new Date()); window.go('agenda');
+const calHtml2 = document.getElementById('screen').innerHTML;
+ok('con citas a las 23:00-23:30 la rejilla se amplía (etiqueta 23:00)', /calHourLabel[^>]*>23:00/.test(calHtml2));
+ok('la rejilla mantiene el inicio a las 08:00', /calHourLabel[^>]*>08:00/.test(calHtml2));
+
+console.log('\n== Factura con IGIC "revisar": aviso visible ==');
+S.invoices.push({id:'iRev', c:'c1', num:'T-999/2026', date:'2026-07-01', due:'2026-07-31', concept:'Prueba', base:60, igic:0, irpf:0, total:60, st:'emitida', reg:'revisar'});
+window.seeInvoice('iRev');
+ok('la factura avisa del régimen pendiente de revisar', /pendiente de revisar/.test(document.getElementById('modal').innerHTML) && /sin IGIC/.test(document.getElementById('modal').innerHTML));
+window.seeInvoice(S.invoices[0].id);
+ok('las facturas normales no llevan el aviso', !/pendiente de revisar/.test(document.getElementById('modal').innerHTML));
+
+console.log('\n== Vendorización y service worker ==');
+const invoiceSrc = fs.readFileSync(path + '/assets/js/invoice.js', 'utf8');
+ok('el PDF carga primero la copia local vendorizada', /\/assets\/vendor\/html2pdf\.bundle\.min\.js/.test(invoiceSrc));
+ok('la copia vendorizada existe en el repo', fs.existsSync(path + '/assets/vendor/html2pdf.bundle.min.js'));
+const swSrc = fs.readFileSync(path + '/sw.js', 'utf8');
+ok('sw.js versiona el cache (sesiona-v2)', /sesiona-v2/.test(swSrc));
+ok('sw.js precachea el vendor', /assets\/vendor\/html2pdf\.bundle\.min\.js/.test(swSrc));
+ok('sw.js usa network-first para JS/CSS propios', /destination === 'script' \|\| request\.destination === 'style'/.test(swSrc));
+ok('sw.js cachea los CDN de OCR/PDF para uso offline', /tessdata\.projectnaptha\.com/.test(swSrc) && /CDN_CACHE/.test(swSrc));
 
 console.log('\n== Resumen ==');
 console.log('PASS '+pass+'  FAIL '+fail);

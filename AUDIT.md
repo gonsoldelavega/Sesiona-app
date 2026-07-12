@@ -88,7 +88,53 @@ docs/                       ocr-setup.md, whatsapp-bot-setup.md
 
 **Sprint 6 — Pulido UX** (U2, U3): toasts, aria, contrastes.
 
-## 4. Notas operativas
+## 4. Auditoría de testing E2E (2026-07-12 · rama `claude/app-testing-improvements-oe8zsd`)
+
+Simulación completa con navegador real (Playwright + Chromium, TZ `Atlantic/Canary`, viewport móvil):
+onboarding, clientes, agenda lista/calendario, facturación auto/manual, cobros, anulación, avisos,
+gastos, gestoría, ajustes, demo, foto-agenda sin red, envío PDF sin red, persistencia y PWA.
+
+### Bugs encontrados y CORREGIDOS en esta rama
+| ID | Bug | Fix |
+|----|-----|-----|
+| T1 | **Fechas UTC en calendario**: `shiftCG/shiftCGfrom/addDays/today` usaban `toISOString()` (UTC). En Canarias en verano (UTC+1) el calendario arrancaba en *ayer* y cada ‹/› derivaba un día. También afectaba al fin del filtro "Mes" | Helper `ymd()` con fecha local; suite de tests ahora corre con `TZ=Atlantic/Canary` |
+| T2 | La métrica **"Pendiente"** del panel contaba facturas **anuladas** | `metrics().pend` filtra `st!='anulada'` |
+| T3 | El **nombre profesional nunca aparecía en la cabecera**: el script inline comprobaba `window.S`, que no existe (`let S` no cuelga de window) | `updateBrand()` en `render()`; script inline eliminado |
+| T4 | Escapado HTML incompleto: selects de cliente (cita/factura), hero "Próxima cita", modal factura creada, inputs pref/wa de Ajustes | `esc()` aplicado |
+| T5 | Aviso del formulario de cita prometía factura automática aunque el modo por defecto es **manual** | Texto dinámico según `autoBillOn()` |
+| T6 | "Crear factura" facturaba a clientes **amigo** / citas *no facturar* sin aviso, con botón destacado | Confirmación previa + botón secundario |
+| T7 | Citas fuera de la rejilla 8–21 (p. ej. 23:00) se pintaban en `top:100%` (invisibles) en el calendario | Clamp dentro de la rejilla |
+| T8 | Facturas anuladas mostraban "pendiente X €" y ofrecían Cobrar/Anular/WhatsApp; `payForm` las listaba | Ocultas esas acciones; `payForm` filtra anuladas |
+| T9 | **Gastos sin editar/borrar**: un error era permanente | `expenseForm(id)`, `saveExpense(id)`, `delExpense(id)` + fecha visible en la lista |
+| T10 | Foto-agenda: la entrada manual solo era accesible si el OCR fallaba | Botón "Introducir citas a mano" en la pantalla 1 |
+| T11 | Copia de seguridad con nombre legado `consulta-clara-canarias-v9.json`; `clearAll` no limpiaba la clave antigua `ccc` (los datos "resucitaban") | `sesiona-copia-<fecha>.json`; se limpia también `ccc` |
+| — | Pretty-print de `app.js` (D1) aplicado con prettier, sin cambios de lógica | Commit propio |
+
+Suite ampliada: 51 → **77 tests** (fechas locales, anuladas, escapado, confirmación amigo, gastos, calendario, copia, foto manual, aviso dinámico).
+
+### Verificado OK en la simulación
+Onboarding y wizard · facturación auto (IGIC 7% + IRPF, total exacto) y manual · numeración correlativa por año ·
+plantilla profesional de factura · cobros parciales y sello Pagada/Parcial · WhatsApp (wa.me con mensaje y enlaces SÍ/NO) ·
+fallback sin red de OCR y de PDF · exportación CSV/JSON · persistencia localStorage · SW + manifest (PWA) · demo `#demo` (3/3/3) y bloqueo de demo con datos.
+
+### Mejoras propuestas → APLICADAS (2026-07-12, misma rama)
+| ID | Mejora | Implementación |
+|----|--------|----------------|
+| M1 | **Importar copia de seguridad** | Botón "Importar copia" en Ajustes: valida el JSON, confirma con recuento (clientes/citas/facturas), sustituye datos y recarga. Verificado el ciclo completo exportar → vaciar → importar en navegador |
+| M2 | **Borrar citas, clientes y cobros** | "Eliminar cita" en el formulario de edición (la factura asociada se conserva). "Eliminar cliente" bloqueado si tiene facturas (conservación fiscal); si no, borra también sus citas tras confirmar. "Registrar cobro" lista los cobros de la factura con "Borrar cobro" |
+| M3 | **Actualización fiable de la PWA** | `sw.js`: cache `sesiona-v2`; JS/CSS propios pasan a network-first con fallback a cache → un deploy se ve en la siguiente carga (antes: dos cargas por stale-while-revalidate) y offline sigue funcionando |
+| M4 | **Aviso IGIC "revisar"** | La factura muestra un aviso destacado ("emitida sin IGIC, confirmar con gestoría") cuando el régimen del cliente es `revisar`; también en el PDF |
+| M5 | **Rejilla del calendario dinámica** | Si hay citas antes de las 08:00 o después de las 21:00 en los 3 días visibles, la rejilla se amplía (hasta 00–24) en vez de aplastar los bloques |
+| M6 | **Vendorización CDNs (D3)** | `html2pdf` vendorizado en `assets/vendor/` (carga local primero, CDN de respaldo) → el PDF funciona 100 % offline. Tesseract no se vendoriza (worker+wasm+traineddata ≈ decenas de MB); en su lugar el SW cachea en runtime los CDN permitidos (`cdn.jsdelivr.net`, `unpkg.com`, `tessdata.projectnaptha.com`): tras el primer OCR con red, también funciona offline |
+
+Suite: 77 → **99 tests**. Verificación E2E adicional en navegador (import/export con archivo real, borrados, PDF sin red, rejilla, aviso IGIC, SW v2): sin hallazgos.
+
+### Ideas restantes (no bloqueantes)
+- Archivar clientes (ocultar sin borrar) para históricos largos.
+- Editar cobros in situ (hoy: borrar + volver a registrar).
+- Aviso "nueva versión disponible" con botón de recarga (hoy el deploy llega en la siguiente carga; suficiente en la práctica).
+
+## 5. Notas operativas
 - Hay **PR #1 abierta** con todo el trabajo previo (agenda nueva, facturas PDF, OCR foto, bot). Decidir si se fusiona antes de empezar sprints (recomendado: fusionar y abrir `mejora/<tema>` desde main).
 - Prohibiciones vigentes: sin force-push, sin tocar BD destructivamente, sin merge a main sin aprobación.
 - Pendientes de Nando: nº WhatsApp dedicado (más adelante), service_role en `.env` del VPS, decidir S3.
